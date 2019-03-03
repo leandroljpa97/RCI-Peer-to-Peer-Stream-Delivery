@@ -1,7 +1,7 @@
 # RCI-Peer-to-Peer-Stream-Delivery
 
 ## DUVIDAS
-
+-> LIMPEZA DE BUFFERS TA TUDO MAL ACHO EU!
 -> se meter os argumentos de entrada do iamRoot trocados? tenho de prevenir isso?
 -> tenho de verificar se os IPS sao validos e têm os carateres especificados?
 Temos de criar estados para o programa. É mais fácil trabalhar assim!
