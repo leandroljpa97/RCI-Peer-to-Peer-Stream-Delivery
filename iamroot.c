@@ -32,18 +32,20 @@ COMMENTS
 
 int root =0;
 
-
-void initFdSockets(fd_set * _fd_sockets, int* _maxfd, int _fd){
+void initFdSockets(fd_set * _fd_sockets, int* _maxfd){
 	FD_ZERO(_fd_sockets);
 	FD_SET(0,_fd_sockets);
-	if(_fd!=-1){
-			FD_SET(_fd, _fd_sockets);
-			*_maxfd = _fd;
-		}
-	else
-		*_maxfd = 0;
+
+	_maxfd = 0;
 
 }
+
+void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd)
+{
+    FD_SET(_fd, _fd_sockets);
+    *_maxfd = _fd;
+}
+
 
 int checkPort(int _port)
 {
@@ -371,7 +373,7 @@ void interpRootServerMsg( int _fd_udp, struct addrinfo *_res, char _data[]){
 int main(int argc, char* argv[]){
 	//files descriptor	
 	//fd_up is to TCP communication with the source (if this node is root) or with the dad						
-	int fd=-1,fd_udp=-1,fd_up, addrlen_udp, addrlen_tcp,n;
+	int fd=-1,fd_udp=-1,fd_up=-1, addrlen_udp, addrlen_tcp,n;
 	fd_set fd_sockets;	
 	//variables to use in timeout of select							
 	struct timeval* t1 = NULL;
@@ -410,7 +412,6 @@ int main(int argc, char* argv[]){
      &tsecs,streamId,streamName,sourceIp,sourcePort,&dataStream,&debug);
     initUdp(&hints_udp);
     initTcp(&hints_tcp);
-    initFdSockets(&fd_sockets, &maxfd,fd);
 
    // createUdpSocket(&fd_udp,ip_root_server, port_root_server,res,&hints_udp);
    n = getaddrinfo(ip_root_server, port_root_server, &hints_udp, &res);
@@ -426,6 +427,7 @@ int main(int argc, char* argv[]){
     } 
 
     fd = fd_udp;
+
     status = ROOTSERVER;
 
     whoIsRoot(fd_udp,res, streamId, ipaddr,uport);
@@ -442,7 +444,13 @@ int main(int argc, char* argv[]){
 		content[0]='\0';
 
 		//printf("---- %d ---------------\n", fd);
-		initFdSockets(&fd_sockets, &maxfd,fd);
+        //isto ta um pouco feio assim, em baixo, mas basicamente é para considerar o fd=3 do udp e o fd=4 do tcp!! nao pode ser so um deles..
+        initFdSockets(&fd_sockets, &maxfd);
+        addFd(&fd_sockets, &maxfd,fd_udp);
+
+        if(fd_up!=-1)
+            addFd(&fd_sockets, &maxfd,fd_up);
+
 
 
 		t1=NULL;
@@ -455,6 +463,7 @@ int main(int argc, char* argv[]){
             //establish communication with sourceServer, with ip and port obtained in streamId
             if(root){
                 printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
+                //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
                 //n = getaddrinfo(sourceIp, sourcePort,&hints_tcp, &res_tcp);
                 n = getaddrinfo("192.168.1.7","58100",&hints_tcp, &res_tcp);
                 if(n!=0) {
@@ -480,6 +489,7 @@ int main(int argc, char* argv[]){
             }
             // if the node isn't root, he establish a connection with the root 
             else if(!root){
+                //igual ao de cima!!! ->
                 //n = getaddrinfo(ipaddr_aux ,uport_aux  ,&hints_tcp, &res_tcp);
                 n = getaddrinfo("192.168.1.7","58100",&hints_tcp, &res_tcp);
 
