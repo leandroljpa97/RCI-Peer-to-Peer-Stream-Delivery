@@ -455,7 +455,8 @@ int main(int argc, char* argv[]){
             //establish communication with sourceServer, with ip and port obtained in streamId
             if(root){
                 printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
-                n = getaddrinfo(sourceIp, sourcePort,&hints_tcp, &res_tcp);
+                //n = getaddrinfo(sourceIp, sourcePort,&hints_tcp, &res_tcp);
+                n = getaddrinfo("192.168.1.7","58100",&hints_tcp, &res_tcp);
                 if(n!=0) {
                     printf("error getaddrinfo in TCP source server \n");
                     exit(1);
@@ -479,7 +480,9 @@ int main(int argc, char* argv[]){
             }
             // if the node isn't root, he establish a connection with the root 
             else if(!root){
-                n = getaddrinfo(ipaddr_aux ,uport_aux  ,&hints_tcp, &res_tcp);
+                //n = getaddrinfo(ipaddr_aux ,uport_aux  ,&hints_tcp, &res_tcp);
+                n = getaddrinfo("192.168.1.7","58100",&hints_tcp, &res_tcp);
+
                 if(n!=0) {
                     printf("error getaddrinfo in TCP source server \n");
                     exit(1);
