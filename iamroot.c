@@ -35,20 +35,17 @@ int root =0;
 void initFdSockets(fd_set * _fd_sockets, int* _maxfd){
 	FD_ZERO(_fd_sockets);
 	FD_SET(0,_fd_sockets);
-
 	_maxfd = 0;
 
 }
 
-void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd)
-{
+void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd){
     FD_SET(_fd, _fd_sockets);
     *_maxfd = _fd;
 }
 
 
-int checkPort(int _port)
-{
+int checkPort(int _port){
     if(_port>1024 && _port <65535)
         return 1;
     return 0;
@@ -246,8 +243,7 @@ void initTcp(struct addrinfo *hints_tcp){
 //as duas funçoes de baixo tem de se ver melhor de acordo com o nosso programa se nao e melhor retornar int e nao sei se faz sentido dar exit..
 // se calhar fecha-se simplesmente o socket e continua-se mas depende do programa
 
-void readTcp(int fd, char* buffer)
-{
+void readTcp(int fd, char* buffer){
     char aux[128];  
     int n;         
     n=read(fd,aux,sizeof(aux));
@@ -261,8 +257,7 @@ void readTcp(int fd, char* buffer)
     strcat(buffer, aux);
 }
 
-void write_tcp(int fd, char *msg)
-{
+void write_tcp(int fd, char *msg){
     int nSended;   
     int nBytes;     
     int nLeft;      
