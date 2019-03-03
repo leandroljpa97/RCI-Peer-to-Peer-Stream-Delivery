@@ -18,6 +18,7 @@ COMMENTS
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include "udp.h"
+#include "tcp.h"
 
 
 //nao tenho a certeza se o porto do servidor fonte e este. nao enontrei no enunciado
