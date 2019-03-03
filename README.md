@@ -1,6 +1,9 @@
 # RCI-Peer-to-Peer-Stream-Delivery
 
 ## DUVIDAS
+
+-> se meter os argumentos de entrada do iamRoot trocados? tenho de prevenir isso?
+-> tenho de verificar se os IPS sao validos e têm os carateres especificados?
 Temos de criar estados para o programa. É mais fácil trabalhar assim!
 
 -> quando sái por timeout do select o que fazer? Vai depender do estado em que estou..
@@ -17,3 +20,5 @@ Temos de criar estados para o programa. É mais fácil trabalhar assim!
 ->verificar os tamanhos do streamId!! verificar os tamanhos das streams e assim
 -> temos de limitar o nº de pontos de acesso ao nr de ips validos  . bestpops!
 -> tem de se confirmar que os ips sao validos.. tipo meter um ip assim 'olaaaaaa' sai-se logo?
+
+-> USER INTERFACE INSENSÍVEL A MAIUSCULAS
