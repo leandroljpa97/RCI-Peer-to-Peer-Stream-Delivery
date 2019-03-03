@@ -209,12 +209,7 @@ void createUdpSocket(int *fd_udp, char ip[], char port[], struct addrinfo *res,s
 }
   
 
-void initTcp(struct addrinfo *hints_tcp){
-	memset(hints_tcp, 0 ,sizeof(*hints_tcp));
-    hints_tcp->ai_family=AF_INET;    
-    hints_tcp->ai_socktype=SOCK_STREAM;   
-    hints_tcp->ai_flags= AI_NUMERICSERV;
-}
+
 
 void sendUdp(int _fd, char _data[], struct addrinfo *_res ){
 	int n;
@@ -236,6 +231,57 @@ void receiveUdp(int _fd, char _buffer[], struct sockaddr_in *_addr){
 	            exit(1);
 	        }
 }
+
+
+void initTcp(struct addrinfo *hints_tcp){
+    memset(hints_tcp, 0 ,sizeof(*hints_tcp));
+    hints_tcp->ai_family=AF_INET;    
+    hints_tcp->ai_socktype=SOCK_STREAM;   
+    hints_tcp->ai_flags= AI_NUMERICSERV;
+}
+
+//as duas funçoes de baixo tem de se ver melhor de acordo com o nosso programa se nao e melhor retornar int e nao sei se faz sentido dar exit..
+// se calhar fecha-se simplesmente o socket e continua-se mas depende do programa
+
+void readTcp(int fd, char* buffer)
+{
+    char aux[128];  
+    int n;         
+    n=read(fd,aux,sizeof(aux));
+    if(n==-1){
+        printf("error reading in TCP \n");
+        exit(1);
+    }
+    
+
+    aux[n]='\0';
+    strcat(buffer, aux);
+}
+
+void write_tcp(int fd, char *msg)
+{
+    int nSended;   
+    int nBytes;     
+    int nLeft;      
+
+    nBytes=strlen(msg); 
+    nLeft=nBytes;
+
+    while(nLeft>0)
+    {
+        nSended=write(fd,msg,nLeft);
+        if(nSended<=0){
+            printf("error sending message \n");
+        }
+
+        nLeft-=nSended;
+        msg+=nSended;
+    }
+
+    msg-=nBytes;
+}
+
+
 
 void whoIsRoot(int _fd, struct addrinfo *_res, char _streamId[], char _ipaddr[], char _uport[]){
     char buffer[150];
@@ -349,7 +395,7 @@ int main(int argc, char* argv[]){
     char sourcePort[16]="58011";
     //confirmar se nao há um default para meter
 	//valores um pouco a toa...			
-	char action[50], data[100],content[65],buffer[128], ipaddr_aux[40] ,uport_aux[40];
+	char action[50], data[100],content[65],buffer[128], buffer_tcp[128], ipaddr_aux[40] ,uport_aux[40];
 	int counter= 0, maxfd = 0;
 	char *aux;
 	int flag = 0;
@@ -383,12 +429,13 @@ int main(int argc, char* argv[]){
 
     whoIsRoot(fd_udp,res, streamId, ipaddr,uport);
     printf("fiz o whoIsRoot \n");
-
+    //dump(fd_udp, res);
 
 
 	while(1){	
 		//limpar os buffers!! falta o  ipaddr_aux[40] e uport_aux[40];! ver se dá!
 		buffer[0]='\0';
+        buffer_tcp[0]='\0';
 		action[0]='\0';
 		data[0]='\0';
 		content[0]='\0';
@@ -402,6 +449,56 @@ int main(int argc, char* argv[]){
 		t2.tv_usec = 0;
 		t2.tv_sec = 30;
 		t1=&t2;
+
+        if(status==FIND_ROOT){
+            //establish communication with sourceServer, with ip and port obtained in streamId
+            if(root){
+                printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
+                n = getaddrinfo(sourceIp, sourcePort,&hints_tcp, &res_tcp);
+                if(n!=0) {
+                    printf("error getaddrinfo in TCP source server \n");
+                    exit(1);
+                }
+
+                fd_up = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
+                if(fd_up==-1) {
+                    printf("error creating TCP socket TCP to source server!! \n ");
+                    exit(1);
+                }
+
+                n = connect(fd_up, res_tcp->ai_addr, res_tcp->ai_addrlen);
+                if(fd_up==-1) {
+                    printf("error in connect with TCP socket TCP in source!! \n ");
+                    exit(1);
+                } 
+                fd=fd_up;
+                status= NORMAL; 
+                printf("o fd depois do tcp é : %d \n", fd);
+
+            }
+            // if the node isn't root, he establish a connection with the root 
+            else if(!root){
+                n = getaddrinfo(ipaddr_aux ,uport_aux  ,&hints_tcp, &res_tcp);
+                if(n!=0) {
+                    printf("error getaddrinfo in TCP source server \n");
+                    exit(1);
+                }
+
+                fd_up = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
+                if(fd_up==-1) {
+                    printf("error creating TCP socket TCP to source server!! \n ");
+                    exit(1);
+                 }
+
+                n = connect(fd_up, res_tcp->ai_addr, res_tcp->ai_addrlen);
+                if(fd_up==-1) {
+                    printf("error in connect with TCP socket TCP in source!! \n "); 
+                    exit(1);
+                } 
+                fd=fd_up;
+                status=FIND_DAD;
+            }
+        }
 
 		counter=select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*)t1);		
 		
@@ -417,40 +514,6 @@ int main(int argc, char* argv[]){
 			printf("timeout!! \n");
 			//nao sei o que fazer
 		}
-
-		if(status==FIND_ROOT){
-			if(root){
-                printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
-				    n = getaddrinfo(sourceIp, sourcePort,&hints_tcp, &res_tcp);
-				    if(n!=0) {
-				        /*error*/
-				        printf("error getaddrinfo in TCP source server \n");
-				        exit(1);
-				    }
-
-				    fd_up = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
-				    if(fd_up==-1) {
-				        /*error*/
-				        printf("error creating TCP socket TCP to source server!! \n ");
-				        exit(1);
-				    }
-
-				    n = connect(fd_up, res_tcp->ai_addr, res_tcp->ai_addrlen);
-				    if(fd_up==-1) {
-				        /*error*/
-				        printf("error in connect with TCP socket TCP in source!! \n ");
-				        exit(1);
-				    }
-				    fd=fd_up;
-				    status= NORMAL;
-
-			}
-			else if(!root){
-				status=FIND_DAD;
-			}
-		}
-	
-		
 
 		 // fd=0 is stdin
 		if(FD_ISSET(0, &fd_sockets)){
@@ -479,8 +542,7 @@ int main(int argc, char* argv[]){
 	        	printf("a streamID é: %s \n",content);
 	        	printf("o ip da root é %s \n",ipaddr_aux);
 	        	printf("o porto da root é %s \n",uport_aux);
-	        	if(status==ROOTSERVER)
-	        	{
+	        	if(status==ROOTSERVER){
 	        		status=FIND_ROOT;
 	        		root=0;
 	        	}
@@ -500,9 +562,17 @@ int main(int argc, char* argv[]){
 
 		}
 
-		/*else if(FD_ISSET(fd_up, &fd_sockets)){
+		else if(FD_ISSET(fd_up, &fd_sockets)){
 			printf("i received something from TCP \n");
-		} */
+            readTcp(fd_up,buffer_tcp);
+            printf("o buffer tcp é: %s \n",buffer_tcp);
+            if(root){
+                printf("i received stream and from sourceServer \n");
+            }
+            else if(!root){
+                printf("i received from my dad \n");
+            }
+		} 
 	}
 	return 0;
 }
