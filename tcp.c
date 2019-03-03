@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #include "tcp.h"
-/*
+
 void initTcp(struct addrinfo *hints_tcp){
     memset(hints_tcp, 0 ,sizeof(*hints_tcp));
     hints_tcp->ai_family=AF_INET;    
@@ -53,4 +53,4 @@ void write_tcp(int fd, char *msg)
     }
 
     msg-=nBytes;
-}*/
+}

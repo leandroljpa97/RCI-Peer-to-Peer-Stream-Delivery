@@ -18,6 +18,7 @@ COMMENTS
 #include <sys/time.h>
 #include <arpa/inet.h>
 
+#include "APIrootServer.h"
 #include "inout.h"
 #include "udp.h"
 #include "tcp.h"
@@ -27,13 +28,17 @@ COMMENTS
 //nao tenho a certeza se o porto do servidor fonte e este. nao enontrei no enunciado
 #define MAX_LENGTH 50
 
+#define TIMEOUT 30
+
 #define ROOTSERVER 1
 #define FIND_ROOT 2
 #define FIND_DAD 3
 #define NORMAL 4
 
 
-
+/*
+ * initFdSockets: sets an empty mask of file descriptors to be controlled by select
+ */
 void initFdSockets(fd_set * _fd_sockets, int* _maxfd){
 	FD_ZERO(_fd_sockets);
 	FD_SET(0,_fd_sockets);
@@ -41,6 +46,9 @@ void initFdSockets(fd_set * _fd_sockets, int* _maxfd){
 
 }
 
+/*
+ * addFd: add a new file descriptor to be controlled by select
+ */
 void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd){
     FD_SET(_fd, _fd_sockets);
     *_maxfd = _fd;
@@ -48,116 +56,6 @@ void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd){
 
 
 
-
-
-void initUdp(struct addrinfo *hints){
-	memset(hints, 0 ,sizeof(*hints));
-    hints->ai_family=AF_INET;    //IPv4
-    hints->ai_socktype=SOCK_DGRAM;   //UPD Socket
-    hints->ai_flags= AI_NUMERICSERV;
-}
-void createUdpSocket(int *fd_udp, char ip[], char port[], struct addrinfo *res,struct addrinfo *hints_udp){
-	int n;
-	n = getaddrinfo(ip, port, hints_udp, &res);
-   	if(n!=0) {
-        printf("Error in getaddrinfo from ROOT_SERVER \n");
-        exit(1);
-    }
-
-    *fd_udp = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(*fd_udp==-1) {
-        printf("Error creating socket UDP to root_server \n");
-        exit(1);
-    }
-
-}
-  
-
-
-
-void sendUdp(int _fd, char _data[], struct addrinfo *_res ){
-	int n;
-	n = sendto(_fd,_data, strlen(_data), 0 , _res->ai_addr, _res->ai_addrlen);
-	if (n==-1) {
-		perror("Error sending msg via UDP. \n");
-		exit(1);
-	}
-}
-
-void receiveUdp(int _fd, char _buffer[], struct sockaddr_in *_addr){
-	//meter um DEFINE PARA ESTE 128 NAO?????????????????????????????????????????????
-	int n;
-	socklen_t addrlen;
-	addrlen =sizeof(*_addr);
-	n = recvfrom(_fd, _buffer, 128, 0, (struct sockaddr *)_addr, &addrlen);
-	        if(n==-1) {
-	            printf("Error in receive from UDP \n");
-	            exit(1);
-	        }
-}
-
-
-void initTcp(struct addrinfo *hints_tcp){
-    memset(hints_tcp, 0 ,sizeof(*hints_tcp));
-    hints_tcp->ai_family=AF_INET;    
-    hints_tcp->ai_socktype=SOCK_STREAM;   
-    hints_tcp->ai_flags= AI_NUMERICSERV;
-}
-
-//as duas funçoes de baixo tem de se ver melhor de acordo com o nosso programa se nao e melhor retornar int e nao sei se faz sentido dar exit..
-// se calhar fecha-se simplesmente o socket e continua-se mas depende do programa
-
-void readTcp(int fd, char* buffer){
-    char aux[128];  
-    int n;         
-    n=read(fd,aux,sizeof(aux));
-    if(n==-1){
-        printf("error reading in TCP \n");
-        exit(1);
-    }
-    
-
-    aux[n]='\0';
-    strcat(buffer, aux);
-}
-
-void write_tcp(int fd, char *msg){
-    int nSended;   
-    int nBytes;     
-    int nLeft;      
-
-    nBytes=strlen(msg); 
-    nLeft=nBytes;
-
-    while(nLeft>0)
-    {
-        nSended=write(fd,msg,nLeft);
-        if(nSended<=0){
-            printf("error sending message \n");
-        }
-
-        nLeft-=nSended;
-        msg+=nSended;
-    }
-
-    msg-=nBytes;
-}
-
-
-
-void whoIsRoot(int _fd, struct addrinfo *_res, char _streamId[], char _ipaddr[], char _uport[]){
-    char buffer[150];
-    strcpy(buffer,"WHOISROOT ");
-    strcat(buffer,_streamId);
-    strcat(buffer," ");
-    strcat(buffer,_ipaddr);
-    strcat(buffer,":");
-    strcat(buffer,_uport);
-    strcat(buffer,"\n");
-    printf("o buffer no whoIsRoot é %s \n",buffer);
-    sendUdp(_fd,buffer,_res);
-    printf("dentro do whoirrot o fd é: %d \n",_fd);
-}
 void dump(int _fd, struct addrinfo *_res){
     sendUdp(_fd,"DUMP\n",_res);
     printf("sai de dentro do dump \n");
@@ -245,11 +143,8 @@ int main(int argc, char* argv[]){
     int tcpsessions = 1;
     int bestpops = 1;
     int tsecs = 5;
-    //ISTO USA-SE PARA QUE XICOO???
-    //----------------------------
     int dataStream = 1;
     int debug = 0;
-    //--------------------------
 
     char streamId[64];
     char streamName[45];
@@ -266,49 +161,46 @@ int main(int argc, char* argv[]){
 
 
 	//SOCKET UDP and TCP ! 
-    struct addrinfo hints_tcp, *res_tcp, hints_udp, *res;
+    struct addrinfo hints_tcp, *res_tcp, hints_udp;
     struct sockaddr_in addr_tcp, addr_udp;    
 
+    // Read Input Arguments of the program and set the default variables
     readInputArguments(argc, argv, ipaddr,tport,uport,ip_root_server, port_root_server, &tcpsessions, &bestpops,
-     &tsecs,streamId,streamName,sourceIp,sourcePort,&dataStream,&debug);
+                     &tsecs,streamId,streamName,sourceIp,sourcePort,&dataStream,&debug);
+    
+    // Initiate UPD and TCP strucuture details
     initUdp(&hints_udp);
     initTcp(&hints_tcp);
 
-   // createUdpSocket(&fd_udp,ip_root_server, port_root_server,res,&hints_udp);
-   n = getaddrinfo(ip_root_server, port_root_server, &hints_udp, &res);
-    if(n!=0) {
-        printf("Error in getaddrinfo from ROOT_SERVER");
-        exit(1);
-    }
-
-    fd_udp = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(fd_udp==-1) {
-        printf("Error creating socket UDP to root_server \n");
-        exit(1);
-    } 
+    // Initiates UPD Sockets for datagram communication
+    struct addrinfo  *res = createUdpSocket(&fd_udp,ip_root_server, port_root_server,&hints_udp);
 
     fd = fd_udp;
 
+    // Establishes the status as a root stream
     status = ROOTSERVER;
 
+    // Communicates with the root server to check to how to connect with
     whoIsRoot(fd_udp,res, streamId, ipaddr,uport);
     printf("fiz o whoIsRoot \n");
     //dump(fd_udp, res);
 
 
 	while(1){	
-		//limpar os buffers!! falta o  ipaddr_aux[40] e uport_aux[40];! ver se dá!
+		// Não estou a enteder para que server estes bufffers so com terminadores de string
 		buffer[0]='\0';
         buffer_tcp[0]='\0';
 		action[0]='\0';
 		data[0]='\0';
 		content[0]='\0';
 
-		//printf("---- %d ---------------\n", fd);
-        //isto ta um pouco feio assim, em baixo, mas basicamente é para considerar o fd=3 do udp e o fd=4 do tcp!! nao pode ser so um deles..
+		// Inits the mask of file descriptor
         initFdSockets(&fd_sockets, &maxfd);
+
+        // Adds the file descriptor for the sdandart input - keyboard
         addFd(&fd_sockets, &maxfd,fd_udp);
 
+        // Adds the file descriptor of the TCP to comm with root
         if(fd_up!=-1)
             addFd(&fd_sockets, &maxfd,fd_up);
 
@@ -317,10 +209,10 @@ int main(int argc, char* argv[]){
 		t1=NULL;
 		//mudar estes valores e meter define - 30 segundos!
 		t2.tv_usec = 0;
-		t2.tv_sec = 30;
+		t2.tv_sec = TIMEOUT;
 		t1=&t2;
 
-        if(status==FIND_ROOT){
+        if(status == FIND_ROOT){
             //establish communication with sourceServer, with ip and port obtained in streamId
             if(root){
                 printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
@@ -375,9 +267,10 @@ int main(int argc, char* argv[]){
             }
         }
 
-		counter=select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*)t1);		
+        // Monitor all the file descritors to check for new inputs
+		counter = select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*)t1);		
 		
-		if(counter<0){
+		if(counter < 0){
 			perror("Error in select");
 			if (fd!=-1) 
 				close(fd);
@@ -392,7 +285,7 @@ int main(int argc, char* argv[]){
 
 		 // fd=0 is stdin
 		if(FD_ISSET(0, &fd_sockets)){
-			aux=fgets(data, 100, stdin);
+			aux = fgets(data, 100, stdin);
 
 			if (aux == NULL)
 				printf("Nothing to read in stdin.\n");
@@ -400,6 +293,7 @@ int main(int argc, char* argv[]){
                 interpRootServerMsg(fd_udp,res,data);  
 		
 		}
+        
 		else if(FD_ISSET(fd_udp, &fd_sockets)){
 			printf("recebi algo em udp yeaaaaaah \n");
 	        receiveUdp(fd_udp, buffer, &addr_udp);

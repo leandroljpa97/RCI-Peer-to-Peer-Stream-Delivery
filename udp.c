@@ -4,7 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include "udp.h"
-/*
+
 
 void initUdp(struct addrinfo *hints){
 	memset(hints, 0 ,sizeof(*hints));
@@ -13,20 +13,23 @@ void initUdp(struct addrinfo *hints){
     hints->ai_flags= AI_NUMERICSERV;
 }
 
-void createUdpSocket(int *fd_udp, char ip[], char port[], struct addrinfo *res,struct addrinfo *hints_udp){
+struct addrinfo * createUdpSocket(int *fd_udp, char ip[], char port[], struct addrinfo *hints_udp){
+	struct addrinfo * res;
+
 	int n;
 	n = getaddrinfo(ip, port, hints_udp, &res);
-   	if(n!=0) {
+   	if(n != 0) {
         printf("Error in getaddrinfo from ROOT_SERVER \n");
         exit(1);
     }
 
     *fd_udp = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(*fd_udp==-1) {
+    if(*fd_udp == -1) {
         printf("Error creating socket UDP to root_server \n");
         exit(1);
     }
 
+    return res;
 }
 
 void sendUdp(int _fd, char _data[], struct addrinfo *_res ){
@@ -50,4 +53,3 @@ void receiveUdp(int _fd, char _buffer[], struct sockaddr_in *_addr){
 	        }
 }
 
-*/
