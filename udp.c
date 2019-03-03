@@ -4,7 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include "udp.h"
-
+/*
 
 void initUdp(struct addrinfo *hints){
 	memset(hints, 0 ,sizeof(*hints));
@@ -50,3 +50,4 @@ void receiveUdp(int _fd, char _buffer[], struct sockaddr_in *_addr){
 	        }
 }
 
+*/
