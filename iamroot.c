@@ -30,7 +30,6 @@ COMMENTS
 #define NORMAL 4
 
 
-int root =0;
 
 void initFdSockets(fd_set * _fd_sockets, int* _maxfd){
 	FD_ZERO(_fd_sockets);
@@ -398,6 +397,8 @@ int main(int argc, char* argv[]){
 	char *aux;
 	int flag = 0;
 	int status= -1;
+    int root =0;
+
 
 	//SOCKET UDP and TCP ! 
     struct addrinfo hints_tcp, *res_tcp, hints_udp, *res;
