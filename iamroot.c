@@ -320,8 +320,8 @@ int main(int argc, char* argv[]){
             if(root){
                 printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
                 //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
-                n = getaddrinfo(sourceIp, sourcePort,&hints_tcp, &res_tcp);
-                //n = getaddrinfo("192.168.1.7","58100",&hints_tcp, &res_tcp);
+                //n = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
+                n = getaddrinfo("192.168.2.10","58100",&hints_tcp, &res_tcp);
                 if(n!=0) {
                     printf("error getaddrinfo in TCP source server \n");
                     exit(1);
@@ -346,7 +346,7 @@ int main(int argc, char* argv[]){
             // if the node isn't root, it establish a connection with the root 
             else if(!root){
                 //igual ao de cima!!! ->
-                n = getaddrinfo(ipaddr_aux ,uport_aux  ,&hints_tcp, &res_tcp);
+                n = getaddrinfo(ipaddrRootStream , uportRootStream, &hints_tcp, &res_tcp);
                 //n = getaddrinfo("192.168.1.7","58100",&hints_tcp, &res_tcp);
 
                 if(n!=0) {
@@ -368,11 +368,7 @@ int main(int argc, char* argv[]){
                 fd=fdUp;
                 state=FIND_DAD;
             }
-        }
-
-        
-
-		
+        }		
 	}
 	return 0;
 }
