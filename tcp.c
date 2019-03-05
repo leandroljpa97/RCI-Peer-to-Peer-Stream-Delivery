@@ -14,43 +14,38 @@ void initTcp(struct addrinfo *hints_tcp){
     hints_tcp->ai_flags= AI_NUMERICSERV;
 }
 
-//as duas funçoes de baixo tem de se ver melhor de acordo com o nosso programa se nao e melhor retornar int e nao sei se faz sentido dar exit..
-// se calhar fecha-se simplesmente o socket e continua-se mas depende do programa
 
-void readTcp(int fd, char* buffer)
+
+int readTcp(int _fd, char* buffer, int size)
 {
-    char aux[128];  
-    int n;         
-    n=read(fd,aux,sizeof(aux));
-    if(n==-1){
+    int n = read(_fd, buffer, size);
+    if(n == -1){
         printf("error reading in TCP \n");
         exit(1);
     }
     
-
-    aux[n]='\0';
-    strcat(buffer, aux);
+    return n;
 }
 
-void write_tcp(int fd, char *msg)
+void writeTcp(int _fd, char *data, int size)
 {
     int nSended;   
     int nBytes;     
     int nLeft;      
 
-    nBytes=strlen(msg); 
-    nLeft=nBytes;
+    nBytes = size; 
+    nLeft = nBytes;
 
-    while(nLeft>0)
+    while(nLeft > 0)
     {
-        nSended=write(fd,msg,nLeft);
-        if(nSended<=0){
+        nSended = write(_fd, data, nLeft);
+        if(nSended <= 0){
             printf("error sending message \n");
         }
 
-        nLeft-=nSended;
-        msg+=nSended;
+        nLeft -= nSended;
+        data += nSended;
     }
 
-    msg-=nBytes;
+    data -= nBytes;
 }

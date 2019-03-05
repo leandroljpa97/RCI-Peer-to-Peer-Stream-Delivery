@@ -3,10 +3,10 @@
 
 void initUdp(struct addrinfo *hints);
 
-struct addrinfo * createUdpSocket(int *fd_udp, char ip[], char port[], struct addrinfo *hints_udp);
+struct addrinfo * createUdpSocket(int *_fdUdp, char ip[], char port[], struct addrinfo * _hints_udp);
 
-void sendUdp(int _fd, char _data[], struct addrinfo *_res );
+int sendUdp(int _fd, char data[], int size, struct addrinfo *_res);
 
-void receiveUdp(int _fd, char _buffer[], struct sockaddr_in *_addr);
+int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr);
 
 #endif

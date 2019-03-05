@@ -22,3 +22,21 @@ Temos de criar estados para o programa. É mais fácil trabalhar assim!
 -> tem de se confirmar que os ips sao validos.. tipo meter um ip assim 'olaaaaaa' sai-se logo?
 
 -> USER INTERFACE INSENSÍVEL A MAIUSCULAS
+
+
+
+/*
+int readTcp(int fd, char* buffer, int size)
+{
+    char aux[128];  
+    int n = read(fd,aux,sizeof(aux));
+    if(n==-1){
+        printf("error reading in TCP \n");
+        exit(1);
+    }
+    
+
+    aux[n]='\0';
+    strcat(buffer, aux);
+}
+*/

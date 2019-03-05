@@ -14,38 +14,41 @@ int checkPort(int _port){
 }
 
 
-void readInputArguments(int argc, char* argv[], char ipaddr[],char tport[],char uport[],char ip_root_server[], char port_root_server[],
- int * tcpsessions, int * bestpops, int * tsecs,char streamId[64],char streamName[45],char sourceIp[46], char sourcePort[],int *dataStream, int *debug){
+void readInputArguments(int argc, char* argv[], char streamId[], char streamName[],
+    					char streamIP[], char streamPort[], char ipaddr[], 
+						char  tport[], char uport[], char rsaddr[], char rsport[],
+						int * tcpsessions, int * bestpops, int * tsecs, 
+						int *dataStream, int *debug) {
 
-    //argc=0 is the me
-    //argc=1
-    if(argc<2){
+    if(argc < 2) {
         printf("%d \n",argc);
         printf("without name of stream  \n");
         exit(1);
     }
-    if(sscanf(argv[1],"%s",streamId) !=1){
+    if(sscanf(argv[1], "%s", streamId) != 1) {
        printf("error in streamId \n");
        exit(1);
     }
-    if(strlen(streamId)>63){
+    if(strlen(streamId) > 63) {
         printf("the length of streamId is greater then 63 charact \n");
         exit(1);
     }
-    if(sscanf(streamId,"%[^:]:%[^:]:%s",streamName,sourceIp,sourcePort)!=3){
+    if(sscanf(streamId,"%[^:]:%[^:]:%s", streamName, streamIP, streamPort)!=3){
         printf("error in streamId parameters \n");
         exit(1);
     }
-    if(!checkPort(atoi(sourcePort))){
-        printf("port not available \n");
+    // A porta que é ali indicada é a porta do servidor de stream, nao da nossa maquina logo aqui nao sabes se esta bem ou nao
+    if(!checkPort(atoi(streamPort))){
+        printf("Port not available \n");
         exit(1);
     }
-    printf("o stream Name é : %s \n", streamName);
-    printf("a sourceIp é : %s \n", sourceIp);
-    printf("o porto é %s \n",sourcePort);
 
+    printf("o stream Name é : %s \n", streamName);
+    printf("a streamIP é : %s \n", streamIP);
+    printf("o porto é %s \n",streamPort);
 
     for (int i = 2; i < argc; ++i) {
+
         if(strcmp(argv[i], "-i") == 0) {
             i++;
             if(sscanf(argv[i], "%s", ipaddr) != 1) {
@@ -82,13 +85,12 @@ void readInputArguments(int argc, char* argv[], char ipaddr[],char tport[],char 
         }
         else if(strcmp(argv[i], "-s") == 0) {
             i++;
-            if(sscanf(argv[i], "%[^:]:%s", ip_root_server, port_root_server) != 2) {
+            if(sscanf(argv[i], "%[^:]:%s", rsaddr, rsport) != 2) {
                 printf("Error decoding ip_root_server, rsport\n");
                 exit(1);
             }
-            printf("ip_root_server %s, rsport %s\n", ip_root_server, port_root_server);
-            if(!checkPort(atoi(port_root_server)))
-            {
+            printf("ip_root_server %s, rsport %s\n", rsaddr, rsport);
+            if(!checkPort(atoi(rsport))) {
                  printf("port not available \n");
                  exit(1);
             }
@@ -99,7 +101,7 @@ void readInputArguments(int argc, char* argv[], char ipaddr[],char tport[],char 
                 printf("Error decoding tcpsessions\n");
                 exit(1);
             }
-            if((*tcpsessions)<1){
+            if((*tcpsessions)<1) {
                 printf("tcpsessions has to be greater than 1 \n");
                 exit(1);
             }

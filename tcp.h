@@ -3,7 +3,9 @@
 
 
 void initTcp(struct addrinfo *hints_tcp);
-void readTcp(int fd, char* buffer);
-void write_tcp(int fd, char *msg);
+
+int readTcp(int _fd, char* buffer, int size);
+
+void writeTcp(int _fd, char *data, int size);
 
 #endif
