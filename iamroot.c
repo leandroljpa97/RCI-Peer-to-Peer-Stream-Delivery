@@ -141,10 +141,7 @@ int main(int argc, char* argv[]){
         
     // Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
-    int fdRootServer = -1, fdUp = -1;
-
-    // Sizes of the addresses in upd and tcp communication
-    int addrlen_udp, addrlen_tcp;
+    int fdRootServer = -1, fdUp = -1, fdAccessServer = -1;
     
     // Mask of active file descriptors
     fd_set fd_sockets;  
@@ -172,8 +169,8 @@ int main(int argc, char* argv[]){
     char ipaddrRootStream[BUFFSIZE], uportRootStream[BUFFSIZE];
 
 	//SOCKET UDP and TCP ! 
-    struct addrinfo hints_tcp, *res_tcp, hints_udp;
-    struct sockaddr_in addr_tcp, addr_udp;   
+    struct addrinfo hints_tcp, *res_tcp, hints_udp, hints_accessServer;
+    struct sockaddr_in addr_udp;   
 
     // Read Input Arguments of the program and set the default variables
     dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIP, streamPort, ipaddr, tport, 
@@ -204,17 +201,27 @@ int main(int argc, char* argv[]){
 
     state = ROOTSERVER;
     
-    //confirmar se nao há um default para meter
-    //valores um pouco a toa...         
-    char action[50], userInput[MAX_LENGTH],content[65], buffer[BUFFSIZE], buffer_tcp[PACKAGETCP];
+    // Communication buffers        
+    char action[50];
+    char buffer[MAX_LENGTH];
+    char userInput[MAX_LENGTH];
+    char bufferRootServer[MAX_LENGTH];
+    
+    char bufferUp[PACKAGETCP];
+
+    // Buffers for Access Server Comunication
+    char bufferAccessServer[MAX_LENGTH];
+    char actionAccessServer[50];
+    char availableIAmRootIP[16];
+    char availableIAmRootPort[6];
     
 	while(1){	
         // Clean the buffers
-        memset(buffer,0,sizeof(buffer));
-        memset(buffer_tcp,0,sizeof(buffer_tcp));
+        //memset(buffer,0,sizeof(buffer));
+        memset(bufferUp,0,sizeof(bufferUp));
         memset(action,0,sizeof(action));
         memset(userInput,0,sizeof(userInput));
-        memset(content,0,sizeof(content));
+        memset(bufferRootServer,0,sizeof(bufferRootServer));
 
 		// Inits the mask of file descriptor
         initMaskStdinFd(&fd_sockets, &maxfd);
@@ -223,15 +230,19 @@ int main(int argc, char* argv[]){
         if(fdRootServer != -1)
             addFd(&fd_sockets, &maxfd, fdRootServer);
 
+        // Adds the file descriptor for the communication with the access server
+        if(fdAccessServer != -1)
+            addFd(&fd_sockets, &maxfd, fdAccessServer);
+
         // Adds the file descriptor of the TCP to comm with root
         if(fdUp!=-1)
             addFd(&fd_sockets, &maxfd, fdUp);
 
         // Time variables
-		t1=NULL;
+		t1 = NULL;
 		t2.tv_usec = 0;
 		t2.tv_sec = TIMEOUT;
-		t1=&t2;
+		t1 = &t2;
 
         // Monitor all the file descritors to check for new inputs
         counter = select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
@@ -263,21 +274,26 @@ int main(int argc, char* argv[]){
         else if(FD_ISSET(fdRootServer, &fd_sockets)){
             printf("recebi algo da root server \n");
 
-            receiveUdp(fdRootServer, buffer, BUFFSIZE, &addr_udp);
+            receiveUdp(fdRootServer, bufferRootServer, MAX_LENGTH, &addr_udp);
 
-            n = sscanf(buffer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", action,content , ipaddrRootStream ,uportRootStream);
+            n = sscanf(bufferRootServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", action, buffer, ipaddrRootStream ,uportRootStream);
             printf("a action é: %s \n",action);
 
             // If the tree is empty, the program is the root stream. Change the state to root and goes to connect to a stream
             if((!strcmp(action,"URROOT")) && state == ROOTSERVER){
                 root = 1;
                 state = FIND_UP;
+
+                // Creates Access Server
+                initUdpServer(&hints_accessServer);
+
+                fdAccessServer = createUpdAccessServer(uport, &hints_accessServer);
             }
             // Receives the information that there's already a root on the tree 
             // and needs to go to the access server to acquire the correct IP and port
             else if(!strcmp(action,"ROOTIS")){
-                //aqui o content ´e a stream id
-                printf("a streamID é: %s \n", content);
+                //aqui o bufferRootServer ´e a stream id
+                printf("a streamID é: %s \n", bufferRootServer);
                 printf("o ip da root é %s \n",ipaddrRootStream);
                 printf("o porto da root é %s \n",uportRootStream);
                 
@@ -288,23 +304,39 @@ int main(int argc, char* argv[]){
 
             }
             else if(!strcmp(action,"STREAMS")) {
-                printf("as streams sao %s \n",content);
+                printf("as streams sao %s \n",bufferRootServer);
             }
             else if(!strcmp(action,"ERROR")) {
-                //aqui a content é a mensagem de erro!!
-                printf("a mensagem de erro é %s \n",content);
+                //aqui a bufferRootServer é a mensagem de erro!!
+                printf("a mensagem de erro é %s \n",bufferRootServer);
             }
 
-            printf("buffer: %s\n",buffer); 
+            printf("bufferRootServer: %s\n",bufferRootServer); 
 
         }
+
+        else if(FD_ISSET(fdAccessServer, &fd_sockets)) {
+            printf("Received something on the access server\n");
+
+            receiveUdp(fdAccessServer, bufferAccessServer, MAX_LENGTH, &addr_udp);
+
+            if(strstr(bufferAccessServer, "POPREQ") != NULL) {
+                n = sscanf(bufferAccessServer, "%[^\n]", actionAccessServer);
+            }
+            else if(strstr(bufferAccessServer, "POPRESP") != NULL) {
+                n = sscanf(bufferAccessServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 
+                    actionAccessServer, buffer, availableIAmRootIP , availableIAmRootPort);
+            }
+
+        }
+
         // When receives a message from up on the tree
         else if(FD_ISSET(fdUp, &fd_sockets)){
             printf("i received something from TCP \n");
 
-            readTcp(fdUp, buffer_tcp, PACKAGETCP);
+            readTcp(fdUp, bufferUp, PACKAGETCP);
 
-            printf("o buffer tcp é: %s \n", buffer_tcp);
+            printf("o buffer tcp é: %s \n", bufferUp);
             if(root){
                 printf("i received stream and from sourceServer\n");
             }
@@ -318,7 +350,7 @@ int main(int argc, char* argv[]){
             //establish communication with sourceServer, with ip and port obtained in streamId
             if(root){
                 printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
-                
+                printf("stream %s:%s\n", streamIP, streamPort);
                 //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
                 n = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
                 //n = getaddrinfo("192.168.2.10","58100",&hints_tcp, &res_tcp);
@@ -365,7 +397,7 @@ int main(int argc, char* argv[]){
                     printf("error in connect with TCP socket TCP in source!! \n "); 
                     exit(1);
                 } 
-                state=FIND_DAD;
+                state = FIND_DAD;
             }
         }		
 	}
