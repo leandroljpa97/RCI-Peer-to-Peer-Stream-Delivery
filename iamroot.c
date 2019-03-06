@@ -198,7 +198,7 @@ int main(int argc, char* argv[]){
     char streamName[44];
     char streamIP[16];
     char streamPort[] = "00000";
-    char ipaddr[16];
+    char ipaddr[16] = "0.0.0.0";
     char tport[] = "58000";
     char uport[] = "58000";
     char rsaddr[] = "193.136.138.142";
