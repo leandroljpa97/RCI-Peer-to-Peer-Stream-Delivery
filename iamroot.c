@@ -44,7 +44,7 @@ COMMENTS
  * initMaskStdinFd: sets an empty mask of file descriptors to be 
  * controlled by select and activates sdantart input
  */
-void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd){
+void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd) {
 	FD_ZERO(_fd_sockets);
 	FD_SET(0,_fd_sockets);
 	_maxfd = 0;
@@ -54,27 +54,16 @@ void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd){
 /*
  * addFd: add a new file descriptor to be controlled by select
  */
-void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd){
+void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd) {
     FD_SET(_fd, _fd_sockets);
     *_maxfd = _fd;
 }
 
 
-void dump(int _fd, struct addrinfo *_res){
-    sendUdp(_fd, "DUMP\n", strlen("DUMP\n"), _res);
-    printf("sai de dentro do dump \n");
-}
-
-void Remove(int _fd, struct addrinfo *_res, char _streamId[]){
-    char buffer[MAX_LENGTH];
-    strcpy(buffer,"REMOVE ");
-    strcat(buffer,_streamId);
-    sendUdp(_fd, buffer, strlen(buffer), _res);
-}
 
 
 
-void interpRootServerMsg(int _fdRootServer, struct addrinfo *_res, char _data[]){
+void interpRootServerMsg(int _fdRootServer, struct addrinfo *_res, char _data[], char _streamID[]){
     char content[50];
     int flag = sscanf(_data, "%s", content);
             printf(" a mensagem vinda do stdi  é: %s \n",content);
@@ -121,7 +110,7 @@ void interpRootServerMsg(int _fdRootServer, struct addrinfo *_res, char _data[])
                 }
                 else if(!strcmp(content,"exit")){
                     printf("pressed exit \n");
-
+                    Remove(_fdRootServer, _res, _streamID);
                 }
                 else 
                     printf("wrong command, try again \n");
@@ -138,7 +127,7 @@ int main(int argc, char* argv[]){
     char streamName[44];
     char streamIP[15];
     char streamPort[] = "00000";
-    char ipaddr[] = "193.136.138.142";
+    char ipaddr[16];
     char tport[] = "58000";
     char uport[] = "58000";
     char rsaddr[] = "193.136.138.142";
@@ -148,6 +137,7 @@ int main(int argc, char* argv[]){
     int tsecs = 5;
     int dataStream = 1;
     int debug = 0;
+    int dumpSignal = 0;
         
     // Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
@@ -166,7 +156,7 @@ int main(int argc, char* argv[]){
     struct timeval t2;
 
     // State of the iamroot application
-    int state = ROOTSERVER;
+    int state = NOSTATE;
 
     // Return state of the select
     int counter= 0;
@@ -188,7 +178,7 @@ int main(int argc, char* argv[]){
     struct sockaddr_in addr_tcp, addr_udp;   
 
     // Read Input Arguments of the program and set the default variables
-    readInputArguments(argc, argv, streamId, streamName, streamIP, streamPort, ipaddr, tport, 
+    dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIP, streamPort, ipaddr, tport, 
                         uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs, 
                         &dataStream, &debug);
 
@@ -202,9 +192,21 @@ int main(int argc, char* argv[]){
 
     fd = fdRootServer;
 
+    // Print all available streams
+    if(dumpSignal == 1) {
+        dump(fdRootServer, res);
+        char dumpBuffer[MAX_LENGTH];
+        receiveUdp(fd, dumpBuffer, MAX_LENGTH, &addr_udp);
+
+        printf("%s\n", dumpBuffer);
+        exit(1);
+    }
+
     // Communicates with the root server to check to how to connect with
     whoIsRoot(fdRootServer, res, streamId, ipaddr, uport);
     printf("fiz o whoIsRoot \n");
+
+    state = ROOTSERVER;
     
     //confirmar se nao há um default para meter
     //valores um pouco a toa...         
@@ -212,11 +214,11 @@ int main(int argc, char* argv[]){
     
 	while(1){	
         // Clean the buffers
-		buffer[0]='\0';
-        buffer_tcp[0]='\0';
-		action[0]='\0';
-		userInput[0]='\0';
-		content[0]='\0';
+        memset(buffer,0,sizeof(buffer));
+        memset(buffer_tcp,0,sizeof(buffer_tcp));
+        memset(action,0,sizeof(action));
+        memset(userInput,0,sizeof(userInput));
+        memset(content,0,sizeof(content));
 
 		// Inits the mask of file descriptor
         initMaskStdinFd(&fd_sockets, &maxfd);
@@ -248,7 +250,7 @@ int main(int argc, char* argv[]){
         // Select got timeout, reset
         if(!counter){
             printf("timeout!!\n");
-            //nao sei o que fazer
+            //se o state for root server tnh de retransmitir
         }
 
         // Checks if something was written on the standart input
@@ -256,7 +258,7 @@ int main(int argc, char* argv[]){
             if (fgets(userInput, MAX_LENGTH, stdin) == NULL)
                 printf("Nothing to read in stdin.\n");
             else 
-                interpRootServerMsg(fdRootServer, res, userInput);  
+                interpRootServerMsg(fdRootServer, res, userInput, streamId);  
         
         }
         
@@ -296,7 +298,7 @@ int main(int argc, char* argv[]){
                 printf("a mensagem de erro é %s \n",content);
             }
 
-            printf("buffer: %s \n",buffer); 
+            printf("buffer: %s\n",buffer); 
 
         }
         // When receives a message from up on the tree
@@ -307,7 +309,7 @@ int main(int argc, char* argv[]){
 
             printf("o buffer tcp é: %s \n", buffer_tcp);
             if(root){
-                printf("i received stream and from sourceServer \n");
+                printf("i received stream and from sourceServer\n");
             }
             else if(!root){
                 printf("i received from my dad \n");
@@ -320,21 +322,21 @@ int main(int argc, char* argv[]){
             if(root){
                 printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
                 //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
-                //n = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
-                n = getaddrinfo("192.168.2.10","58100",&hints_tcp, &res_tcp);
-                if(n!=0) {
+                n = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
+                //n = getaddrinfo("192.168.2.10","58100",&hints_tcp, &res_tcp);
+                if(n != 0) {
                     printf("error getaddrinfo in TCP source server \n");
                     exit(1);
                 }
 
                 fdUp = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
-                if(fdUp==-1) {
+                if(fdUp == -1) {
                     printf("error creating TCP socket TCP to source server!! \n ");
                     exit(1);
                 }
 
                 n = connect(fdUp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-                if(fdUp==-1) {
+                if(n == -1) {
                     printf("error in connect with TCP socket TCP in source!! \n ");
                     exit(1);
                 } 

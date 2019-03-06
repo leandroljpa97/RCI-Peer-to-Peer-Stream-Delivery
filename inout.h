@@ -1,7 +1,7 @@
 #ifndef INOUT_H_INCLUDE
 #define INOUT_H_INCLUDE
 
-void readInputArguments(int argc, char* argv[], char streamId[], char streamName[],
+int readInputArguments(int argc, char* argv[], char streamId[], char streamName[],
     					char streamIP[], char streamPort[], char ipaddr[], 
 						char  tport[], char uport[], char rsaddr[], char rsport[],
 						int * tcpsessions, int * bestpops, int * tsecs, 

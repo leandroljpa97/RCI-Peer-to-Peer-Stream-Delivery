@@ -14,16 +14,14 @@ int checkPort(int _port){
 }
 
 
-void readInputArguments(int argc, char* argv[], char streamId[], char streamName[],
+int readInputArguments(int argc, char* argv[], char streamId[], char streamName[],
     					char streamIP[], char streamPort[], char ipaddr[], 
 						char  tport[], char uport[], char rsaddr[], char rsport[],
 						int * tcpsessions, int * bestpops, int * tsecs, 
 						int *dataStream, int *debug) {
-
     if(argc < 2) {
-        printf("%d \n",argc);
-        printf("without name of stream  \n");
-        exit(1);
+        // Show available Streams
+        return 1;
     }
     if(sscanf(argv[1], "%s", streamId) != 1) {
        printf("error in streamId \n");
@@ -146,7 +144,7 @@ void readInputArguments(int argc, char* argv[], char streamId[], char streamName
     }
 
     printf("Input Arguments Read\n");
-
+    return 0;
 
 }
 

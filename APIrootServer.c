@@ -23,3 +23,15 @@ void whoIsRoot(int _fd, struct addrinfo *_res, char _streamId[], char _ipaddr[],
     
     sendUdp(_fd, buffer, BUFFSIZE, _res);
 }
+
+void Remove(int _fd, struct addrinfo *_res, char _streamId[]){
+    char buffer[BUFFSIZE];
+    strcpy(buffer,"REMOVE ");
+    strcat(buffer,_streamId);
+    sendUdp(_fd, buffer, BUFFSIZE, _res);
+}
+
+void dump(int _fd, struct addrinfo *_res) {
+    sendUdp(_fd, "DUMP\n", strlen("DUMP\n"), _res);
+    printf("sai de dentro do dump \n");
+}

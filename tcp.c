@@ -11,7 +11,7 @@ void initTcp(struct addrinfo *hints_tcp){
     memset(hints_tcp, 0 ,sizeof(*hints_tcp));
     hints_tcp->ai_family=AF_INET;    
     hints_tcp->ai_socktype=SOCK_STREAM;   
-    hints_tcp->ai_flags= AI_NUMERICSERV;
+    hints_tcp->ai_flags= AI_NUMERICHOST | AI_NUMERICSERV;
 }
 
 
