@@ -38,6 +38,77 @@ COMMENTS
 #define FIND_DAD 3
 #define NORMAL 4
 
+typedef struct _clientList {
+    int fd;
+    struct _clientList * next;
+} clientList;
+
+typedef struct _clients {
+    int maxClients;
+    int nrAvailable;
+    clientList *clients;
+} clients_t;
+
+clientList * newClient(clientList ** head, int _fd) {
+    clientList * new = NULL;
+    new = (clientList *) malloc(sizeof(clientList));
+    if (new == NULL) {
+        printf("Error malloc list\n");
+        exit(1);
+    }
+
+    new->fd = _fd;
+    new->next = *head;
+
+    *head = new;
+
+    return new;
+}
+
+void pop(clientList ** head) {
+    clientList * next_node = NULL;
+
+    if (*head == NULL) {
+        return;
+    }
+
+    next_node = (*head)->next;
+    free(*head);
+    *head = next_node;
+}
+
+void removeByFd(clientList ** head, int _fd) {
+    int i = 0;
+    int n = 0;
+    clientList * current = *head;
+    clientList * temp_node = NULL;
+
+    while(current != NULL) {
+        if(current->fd == _fd) {
+            break;
+        }
+        n++;
+        current = current->next;
+    }
+
+    current = *head;
+
+    if (n == 0) {
+        return pop(head);
+    }
+
+    for (i = 0; i < n-1; i++) {
+        if (current->next == NULL) {
+            return ;
+        }
+        current = current->next;
+    }
+
+    temp_node = current->next;
+    current->next = temp_node->next;
+    free(temp_node);
+}
+
 
 
 /*
@@ -138,6 +209,8 @@ int main(int argc, char* argv[]){
     int dataStream = 1;
     int debug = 0;
     int dumpSignal = 0;
+
+    clients_t clients;
         
     // Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
@@ -176,6 +249,9 @@ int main(int argc, char* argv[]){
     dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIP, streamPort, ipaddr, tport, 
                         uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs, 
                         &dataStream, &debug);
+
+    clients.maxClients = tcpsessions;
+    clients.nrAvailable = tcpsessions;
 
     // Initiate UPD and TCP strucuture details
     initUdp(&hints_udp);
@@ -287,6 +363,8 @@ int main(int argc, char* argv[]){
                 // Creates Access Server
                 initUdpServer(&hints_accessServer);
 
+
+
                 fdAccessServer = createUpdAccessServer(uport, &hints_accessServer);
             }
             // Receives the information that there's already a root on the tree 
@@ -314,7 +392,7 @@ int main(int argc, char* argv[]){
             printf("bufferRootServer: %s\n",bufferRootServer); 
 
         }
-
+        // When receives messages from the access server
         else if(FD_ISSET(fdAccessServer, &fd_sockets)) {
             printf("Received something on the access server\n");
 
