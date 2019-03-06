@@ -125,7 +125,7 @@ int main(int argc, char* argv[]){
     // Defualt init variables
     char streamId[64];
     char streamName[44];
-    char streamIP[15];
+    char streamIP[16];
     char streamPort[] = "00000";
     char ipaddr[16];
     char tport[] = "58000";
@@ -142,8 +142,6 @@ int main(int argc, char* argv[]){
     // Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
     int fdRootServer = -1, fdUp = -1;
-    // Indicates the active file descriptor
-    int fd = -1;
 
     // Sizes of the addresses in upd and tcp communication
     int addrlen_udp, addrlen_tcp;
@@ -190,13 +188,11 @@ int main(int argc, char* argv[]){
     // Initiates UPD Sockets for datagram communication
     struct addrinfo  *res = createUdpSocket(&fdRootServer, rsaddr, rsport, &hints_udp);
 
-    fd = fdRootServer;
-
     // Print all available streams
     if(dumpSignal == 1) {
         dump(fdRootServer, res);
         char dumpBuffer[MAX_LENGTH];
-        receiveUdp(fd, dumpBuffer, MAX_LENGTH, &addr_udp);
+        receiveUdp(fdRootServer, dumpBuffer, MAX_LENGTH, &addr_udp);
 
         printf("%s\n", dumpBuffer);
         exit(1);
@@ -242,8 +238,9 @@ int main(int argc, char* argv[]){
         
         if(counter < 0){
             perror("Error in select");
-            if (fd!=-1) 
-                close(fd);
+            
+            // CLOSE ALL FD
+
             exit(0);
         }
 
@@ -321,6 +318,7 @@ int main(int argc, char* argv[]){
             //establish communication with sourceServer, with ip and port obtained in streamId
             if(root){
                 printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
+                
                 //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
                 n = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
                 //n = getaddrinfo("192.168.2.10","58100",&hints_tcp, &res_tcp);
@@ -339,10 +337,10 @@ int main(int argc, char* argv[]){
                 if(n == -1) {
                     printf("error in connect with TCP socket TCP in source!! \n ");
                     exit(1);
-                } 
-                fd=fdUp;
-                state= NORMAL; 
-                printf("o fd depois do tcp é : %d \n", fd);
+                }
+
+                state = NORMAL; 
+                printf("o fd depois do tcp é : %d \n", fdUp);
 
             }
             // if the node isn't root, it establish a connection with the root 
@@ -367,7 +365,6 @@ int main(int argc, char* argv[]){
                     printf("error in connect with TCP socket TCP in source!! \n "); 
                     exit(1);
                 } 
-                fd=fdUp;
                 state=FIND_DAD;
             }
         }		

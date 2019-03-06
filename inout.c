@@ -84,10 +84,10 @@ int readInputArguments(int argc, char* argv[], char streamId[], char streamName[
         else if(strcmp(argv[i], "-s") == 0) {
             i++;
             if(sscanf(argv[i], "%[^:]:%s", rsaddr, rsport) != 2) {
-                printf("Error decoding ip_root_server, rsport\n");
+                printf("Error decoding rsaddr, rsport\n");
                 exit(1);
             }
-            printf("ip_root_server %s, rsport %s\n", rsaddr, rsport);
+            printf("rsaddr %s, rsport %s\n", rsaddr, rsport);
             if(!checkPort(atoi(rsport))) {
                  printf("port not available \n");
                  exit(1);

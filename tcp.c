@@ -16,14 +16,18 @@ void initTcp(struct addrinfo *hints_tcp){
 
 
 
-int readTcp(int _fd, char* buffer, int size)
-{
-    int n = read(_fd, buffer, size);
-    if(n == -1){
+int readTcp(int fd, char* buffer, int size) {
+    char aux[128];  
+    int n = read(fd,aux,sizeof(aux));
+    if(n==-1){
         printf("error reading in TCP \n");
         exit(1);
     }
     
+
+    aux[n]='\0';
+    strcat(buffer, aux);
+
     return n;
 }
 

@@ -23,20 +23,3 @@ Temos de criar estados para o programa. É mais fácil trabalhar assim!
 
 -> USER INTERFACE INSENSÍVEL A MAIUSCULAS
 
-
-
-/*
-int readTcp(int fd, char* buffer, int size)
-{
-    char aux[128];  
-    int n = read(fd,aux,sizeof(aux));
-    if(n==-1){
-        printf("error reading in TCP \n");
-        exit(1);
-    }
-    
-
-    aux[n]='\0';
-    strcat(buffer, aux);
-}
-*/
