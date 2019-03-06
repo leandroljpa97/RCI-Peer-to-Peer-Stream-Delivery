@@ -24,4 +24,4 @@ Temos de criar estados para o programa. É mais fácil trabalhar assim!
 -> USER INTERFACE INSENSÍVEL A MAIUSCULAS
 
 # FEITO POR LEANDRO NO DIA 6/3 A NOITE!
-1) Uma vez que o steamId não é propriamente o 1º parametro a ser colocado, tem de se correr do argv 1 ate a frente, e admite-se que o que nao for -i, -b , -h (...) admite-se que é streamId!.. No entanto, em que casos é que há erro no input introduzido?
+1) Uma vez que o steamId não é propriamente o 1º parametro a ser colocado, tem de se correr do argv 1 ate a frente, e admite-se que o que nao for -i, -b , -h (...) admite-se que é streamId!.. No entanto, em que casos é que há erro no input introduzido? Se o porto do streamId for mal inserido, eu mando return 1, para ele fazer dump!!
