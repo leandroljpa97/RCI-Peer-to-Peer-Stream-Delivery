@@ -4,6 +4,8 @@
 
 void initTcp(struct addrinfo *hints_tcp);
 
+void initTcpServer(struct addrinfo *hints);
+
 int connectToTcp(char streamIP[], char streamPort[], struct addrinfo *hints_tcp, struct addrinfo **res_tcp);
 
 int readTcp(int _fd, char* buffer, int size);

@@ -43,7 +43,7 @@ aplicação iamroot que faz o pedido ficará registada como raiz do stream em qu
 int whoIsRoot(char _rsaddr[], char _rsport[], char _streamId[], char _streamIp[], 
               char _streamPort[], char _ipaddr[], char _uport[], char _ipaddrRootStream[], 
               char _uportRootStream[], int *state, int *root, struct addrinfo *hints_accessServer, 
-              struct addrinfo *hints_tcp, struct addrinfo **res_tcp, int *fdAccessServer, int *fdUp) {
+              struct addrinfo *hints_tcp, struct addrinfo *res_tcp, int *fdAccessServer, int *fdUp) {
 
     struct addrinfo hints;
     char buffer[BUFFSIZE];
@@ -115,16 +115,15 @@ int whoIsRoot(char _rsaddr[], char _rsport[], char _streamId[], char _streamIp[]
         if((!strcmp(action,"URROOT")) && *state == ROOTSERVER){
             // Indicates that the program is the root of a tree
             *root = 1;
-            
             *state = FIND_UP;
 
             // Creates Access Server
             initUdpServer(hints_accessServer);
             *fdAccessServer = createUpdAccessServer(_uport, hints_accessServer);
 
-            // Access to stream to start transmission
-            *fdUp = connectToTcp(_streamIp, _streamPort, hints_tcp, res_tcp);
-            returnState = 1; 
+            returnState = 1;
+
+
         }
         // Receives the information that there's already a root on the tree 
         // and needs to go to the access server to acquire the correct IP and port

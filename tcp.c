@@ -14,6 +14,13 @@ void initTcp(struct addrinfo *hints_tcp){
     hints_tcp->ai_flags= AI_NUMERICHOST | AI_NUMERICSERV;
 }
 
+void initTcpServer(struct addrinfo *hints){
+    memset(hints, 0 ,sizeof(*hints));
+    hints->ai_family=AF_INET;    //IPv4
+    hints->ai_socktype=SOCK_STREAM;   //UPD Socket
+    hints->ai_flags= AI_PASSIVE|AI_NUMERICSERV;
+}
+
 
 /*
 

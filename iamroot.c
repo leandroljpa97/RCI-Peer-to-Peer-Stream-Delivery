@@ -36,7 +36,8 @@ COMMENTS
 #define ROOTSERVER 1
 #define FIND_UP 2
 #define FIND_DAD 3
-#define NORMAL 4
+#define ACCEPT_CHILD 4
+#define NORMAL 5
 
 typedef struct _clientList {
     int fd;
@@ -189,9 +190,9 @@ int main(int argc, char* argv[]){
     // Defualt init variables
     char streamId[64];
     char streamName[44];
-    char streamIP[16];
-    char streamPort[] = "00000";
-    char ipaddr[16] = "0.0.0.0";
+    char streamIP[16] = "193.136.138.142";
+    char streamPort[] = "58011";
+    char ipaddr[16] = "194.210.156.123";
     char tport[] = "58000";
     char uport[] = "58000";
     char rsaddr[] = "193.136.138.142";
@@ -207,7 +208,8 @@ int main(int argc, char* argv[]){
         
     // Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
-    int fdUp = -1, fdAccessServer = -1;
+    int fdUp = -1, fdAccessServer = -1, fdTcpServer = -1;
+    int addrlenTcpServer, newfd;
     
     // Mask of active file descriptors
     fd_set fd_sockets;  
@@ -235,8 +237,8 @@ int main(int argc, char* argv[]){
     char ipaddrRootStream[BUFFSIZE], uportRootStream[BUFFSIZE];
 
 	//SOCKET UDP and TCP ! 
-    struct addrinfo hints_tcp, *res_tcp, hints_accessServer;
-    struct sockaddr_in addr_udp;   
+    struct addrinfo hints_tcp, *res_tcp, hints_accessServer, hints_tcpServer, *res_tcpServer;
+    struct sockaddr_in addr_udp, addr_tcpServer;   
 
     // Read Input Arguments of the program and set the default variables
     dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIP, streamPort, ipaddr, tport, 
@@ -248,6 +250,7 @@ int main(int argc, char* argv[]){
 
     // Initiate TCP strucuture details
     initTcp(&hints_tcp);
+    initTcpServer(&hints_tcpServer);
 
     // Print all available streams
     if(dumpSignal == 1) {
@@ -260,9 +263,71 @@ int main(int argc, char* argv[]){
     state = ROOTSERVER;
 
     // Communicates with the root server to check to how to connect with
-    whoIsRoot(rsaddr, rsport, streamId, streamIP, streamPort, ipaddr, uport, ipaddrRootStream , uportRootStream, &state, &root, &hints_accessServer, &hints_tcp, &res_tcp, &fdAccessServer, &fdUp);
+    whoIsRoot(rsaddr, rsport, streamId, streamIP, streamPort, ipaddr, uport, ipaddrRootStream , uportRootStream, &state, &root, &hints_accessServer, &hints_tcp, res_tcp, &fdAccessServer, &fdUp);
     printf("fiz o whoIsRoot - root %d, state %d\n", root, state);
 
+    if(state == FIND_UP){
+                //establish communication with sourceServer, with ip and port obtained in streamId
+                if(root){
+                    printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
+                    printf("stream %s:%s\n", streamIP, streamPort);
+                    //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
+                    
+                    
+                    int nb = getaddrinfo("194.210.156.123", streamPort, &hints_tcp, &res_tcp);
+                    //int nb = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
+                    if(nb != 0) {
+                        printf("error getaddrinfo in TCP source server \n");
+                        exit(1);
+                     }
+
+                    fdUp = socket((res_tcp)->ai_family, (res_tcp)->ai_socktype, (res_tcp)->ai_protocol);
+                    if(fdUp == -1) {
+                        printf("error creating TCP socket TCP to source server...2. \n ");
+                        exit(1);
+                    }
+
+                    nb = connect(fdUp, (res_tcp)->ai_addr, (res_tcp)->ai_addrlen);
+                    if(n == -1) {
+                        printf("error in connect with TCP socket TCP in source.... \n ");
+                        exit(1);
+                    }
+
+                    state = ACCEPT_CHILD; 
+                    printf("o fd depois do tcp é : %d \n", fdUp);
+
+                }
+
+                // if the node isn't root, it establish a connection with the root 
+                else if(!root){
+                    //igual ao de cima!!! ->
+                    n = getaddrinfo(ipaddrRootStream , uportRootStream, &hints_tcp, &res_tcp);
+                    //n = getaddrinfo("194.210.156.123","58100",&hints_tcp, &res_tcp);
+
+                    if(n!=0) {
+                        printf("error getaddrinfo in TCP source server \n");
+                        exit(1);
+                    }
+
+                    fdUp = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
+                    if(fdUp==-1) {
+                        printf("error creating TCP socket TCP to source server!! \n ");
+                        exit(1);
+                     }
+
+
+                    n = connect(fdUp, res_tcp->ai_addr, res_tcp->ai_addrlen);
+                    if(fdUp==-1) {
+                        printf("error in connect with TCP socket TCP in source!! \n "); 
+                        exit(1);
+                    } 
+
+                    state = FIND_DAD;
+                }  
+             }
+
+             printf("fdUp: %d \n",fdUp);
+ 
 
     // Communication buffers        
     char buffer[MAX_LENGTH];
@@ -276,7 +341,36 @@ int main(int argc, char* argv[]){
     char availableIAmRootIP[16];
     char availableIAmRootPort[6];
     
-	while(1){	
+	while(1){
+
+        if(state == ACCEPT_CHILD){
+            int nTcp = getaddrinfo(NULL, "56000", &hints_tcpServer, &res_tcpServer);
+            if(nTcp!=0) {
+                printf("Error getting addr info\n");
+                exit(1);
+            }
+
+            fdTcpServer = socket(res_tcpServer->ai_family, res_tcp->ai_socktype, res_tcpServer->ai_protocol);
+            if(fdTcpServer==-1) {
+                printf("Error creating socket\n");
+                exit(1);
+            }
+
+            nTcp = bind(fdTcpServer, res_tcpServer->ai_addr, res_tcpServer->ai_addrlen);
+            if(nTcp == -1) {
+                printf("Error in bind on TCP Server\n");
+                exit(1);
+            }
+
+            if(listen(fdTcpServer, bestpops)==-1) {
+                printf("Error listen\n");
+                exit(1);
+            }
+            printf("waiting new clients \n");
+            state = NORMAL;
+	
+        }
+
         // Clean the buffers
         memset(buffer,0,sizeof(buffer));
         buffer[0] = '\0';
@@ -292,10 +386,14 @@ int main(int argc, char* argv[]){
         // Adds the file descriptor for the communication with the access server
         if(fdAccessServer != -1)
             addFd(&fd_sockets, &maxfd, fdAccessServer);
+        
 
         // Adds the file descriptor of the TCP to comm with root
-        if(fdUp!=-1)
+        if(fdUp != -1)
             addFd(&fd_sockets, &maxfd, fdUp);
+
+        if(fdTcpServer != -1)
+            addFd(&fd_sockets, &maxfd, fdTcpServer);
 
         // Time variables
 		t1 = NULL;
@@ -304,7 +402,8 @@ int main(int argc, char* argv[]){
 		t1 = &t2;
 
         // Monitor all the file descritors to check for new inputs
-        counter = select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
+        counter = select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);  
+        printf("counter : %d \n",counter);   
         
         if(counter < 0){
             perror("Error in select");
@@ -361,46 +460,15 @@ int main(int argc, char* argv[]){
                 }
             } 
 
-            // Depending on the result of "whoisroot", establishes a communication with the stream or the access server 
-            if(state == FIND_UP){
-                //establish communication with sourceServer, with ip and port obtained in streamId
-                if(root){
-                    printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
-                    printf("stream %s:%s\n", streamIP, streamPort);
-                    //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
-                    
-                    fdUp = connectToTcp(streamIP, streamPort, &hints_tcp, &res_tcp);
-
-                    state = NORMAL; 
-                    printf("o fd depois do tcp é : %d \n", fdUp);
-
-                }
-
-                // if the node isn't root, it establish a connection with the root 
-                else if(!root){
-                    //igual ao de cima!!! ->
-                    //n = getaddrinfo(ipaddrRootStream , uportRootStream, &hints_tcp, &res_tcp);
-                    n = getaddrinfo("194.210.156.123","58100",&hints_tcp, &res_tcp);
-
-                    if(n!=0) {
-                        printf("error getaddrinfo in TCP source server \n");
-                        exit(1);
+            else if(FD_ISSET(fdTcpServer,&fd_sockets)){
+                printf("received newClient \n");
+                 if((newfd = accept(fdTcpServer, (struct sockaddr *) &addr_tcpServer, &addrlenTcpServer)) == -1) {
+                         printf("Error while accepting new client\n");
+                         exit(1);
                     }
+            }
 
-                    fdUp = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
-                    if(fdUp==-1) {
-                        printf("error creating TCP socket TCP to source server!! \n ");
-                        exit(1);
-                     }
-
-                    n = connect(fdUp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-                    if(fdUp==-1) {
-                        printf("error in connect with TCP socket TCP in source!! \n "); 
-                        exit(1);
-                    } 
-                    state = FIND_DAD;
-                } 
-             }
+            
         }		
 	}
 	return 0;
