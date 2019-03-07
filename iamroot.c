@@ -50,66 +50,70 @@ typedef struct _clients {
     clientList *clients;
 } clients_t;
 
-clientList * newClient(clientList ** head, int _fd) {
-    clientList * new = NULL;
-    new = (clientList *) malloc(sizeof(clientList));
-    if (new == NULL) {
-        printf("Error malloc list\n");
-        exit(1);
-    }
 
-    new->fd = _fd;
-    new->next = *head;
 
-    *head = new;
 
-    return new;
-}
+void findDad(char _ipaddr[], char _uport[], char _availableIAmRootIP[] , char _availableIAmRootPort[]){
 
-void pop(clientList ** head) {
-    clientList * next_node = NULL;
 
-    if (*head == NULL) {
-        return;
-    }
+    struct addrinfo hints;
+    struct sockaddr_in addr;
+    int fd = -1, max, counter;
+    fd_set fd_sockets;  
+    struct timeval* t1 = NULL;
+    struct timeval t2;
+    char buffer[MAX_LENGTH], action[MAX_LENGTH];
 
-    next_node = (*head)->next;
-    free(*head);
-    *head = next_node;
-}
+    t1 = NULL;
+    t2.tv_usec = 0;
+    t2.tv_sec = TIMEOUT;
+    t1 = &t2;
 
-void removeByFd(clientList ** head, int _fd) {
-    int i = 0;
-    int n = 0;
-    clientList * current = *head;
-    clientList * temp_node = NULL;
+    // Initiates UPD socket for communication with the accessServer
+    initUdp(&hints);
+    struct addrinfo  *res = createUdpSocket(&fd, _ipaddr, _uport, &hints);
 
-    while(current != NULL) {
-        if(current->fd == _fd) {
-            break;
+    // Send POPREQ message to the AccessServer
+    sendUdp(fd, "POPREQ\n", strlen("POPREQ\n"), res);
+
+    printf("POPREQ msg sent \n");
+
+
+    printf("dentro do findDad-> ipaddr: %s e uport: %s \n", _ipaddr,_uport);
+    //there are strems very larges, so that we need to read until we get 2 \n 
+  
+
+        FD_ZERO(&fd_sockets);
+        max = fd;
+        addFd(&fd_sockets, &max, fd);
+        counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
+            
+        if(counter < 0){
+            perror("Error in select"); 
+            close(fd);
+            exit(0);
+            }
+        if(!counter){
+            printf("timeout...\n");
+
         }
-        n++;
-        current = current->next;
-    }
 
-    current = *head;
+        if(FD_ISSET(fd, &fd_sockets)){
+            int n = receiveUdp(fd, buffer,MAX_LENGTH, &addr);
+            if(strstr(buffer, "POPRESP") != NULL) {
+                    n = sscanf(buffer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 
+                        action, buffer, _availableIAmRootIP , _availableIAmRootPort);
+                } 
 
-    if (n == 0) {
-        return pop(head);
-    }
-
-    for (i = 0; i < n-1; i++) {
-        if (current->next == NULL) {
-            return ;
+            printf("%s", buffer);  
         }
-        current = current->next;
-    }
+    
 
-    temp_node = current->next;
-    current->next = temp_node->next;
-    free(temp_node);
+
+
+
+    close(fd);
 }
-
 
 
 
@@ -236,6 +240,9 @@ int main(int argc, char* argv[]){
     // IP Address and port of where the stream is coming
     char ipaddrRootStream[BUFFSIZE], uportRootStream[BUFFSIZE];
 
+    char availableIAmRootIP[16];
+    char availableIAmRootPort[6];
+
 	//SOCKET UDP and TCP ! 
     struct addrinfo hints_tcp, *res_tcp, hints_accessServer, hints_tcpServer, *res_tcpServer;
     struct sockaddr_in addr_udp, addr_tcpServer;   
@@ -274,8 +281,8 @@ int main(int argc, char* argv[]){
                     //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
                     
                     
-                    int nb = getaddrinfo("194.210.156.123", streamPort, &hints_tcp, &res_tcp);
-                    //int nb = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
+                    //int nb = getaddrinfo("194.210.156.123", streamPort, &hints_tcp, &res_tcp);
+                    int nb = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
                     if(nb != 0) {
                         printf("error getaddrinfo in TCP source server \n");
                         exit(1);
@@ -300,27 +307,9 @@ int main(int argc, char* argv[]){
 
                 // if the node isn't root, it establish a connection with the root 
                 else if(!root){
-                    //igual ao de cima!!! ->
-                    n = getaddrinfo(ipaddrRootStream , uportRootStream, &hints_tcp, &res_tcp);
-                    //n = getaddrinfo("194.210.156.123","58100",&hints_tcp, &res_tcp);
+                    findDad(ipaddrRootStream, uportRootStream, availableIAmRootIP , availableIAmRootPort);
+                    
 
-                    if(n!=0) {
-                        printf("error getaddrinfo in TCP source server \n");
-                        exit(1);
-                    }
-
-                    fdUp = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
-                    if(fdUp==-1) {
-                        printf("error creating TCP socket TCP to source server!! \n ");
-                        exit(1);
-                     }
-
-
-                    n = connect(fdUp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-                    if(fdUp==-1) {
-                        printf("error in connect with TCP socket TCP in source!! \n "); 
-                        exit(1);
-                    } 
 
                     state = FIND_DAD;
                 }  
@@ -338,17 +327,17 @@ int main(int argc, char* argv[]){
     // Buffers for Access Server Comunication
     char bufferAccessServer[MAX_LENGTH];
     char actionAccessServer[50];
-    char availableIAmRootIP[16];
-    char availableIAmRootPort[6];
+   
     
 	while(1){
 
         if(state == ACCEPT_CHILD){
-            int nTcp = getaddrinfo(NULL, "56000", &hints_tcpServer, &res_tcpServer);
+            int nTcp = getaddrinfo(NULL, tport, &hints_tcpServer, &res_tcpServer);
             if(nTcp!=0) {
                 printf("Error getting addr info\n");
                 exit(1);
             }
+            printf("o tport é %s \n",tport);
 
             fdTcpServer = socket(res_tcpServer->ai_family, res_tcp->ai_socktype, res_tcpServer->ai_protocol);
             if(fdTcpServer==-1) {
@@ -391,6 +380,7 @@ int main(int argc, char* argv[]){
         // Adds the file descriptor of the TCP to comm with root
         if(fdUp != -1)
             addFd(&fd_sockets, &maxfd, fdUp);
+        
 
         if(fdTcpServer != -1)
             addFd(&fd_sockets, &maxfd, fdTcpServer);
@@ -427,21 +417,22 @@ int main(int argc, char* argv[]){
                     printf("Nothing to read in stdin.\n");
                 else 
                     interpRootServerMsg(userInput, streamId, rsaddr, rsport);    
-            } 
+            }
+           
             
             // When receives messages from the access server
-            else if(FD_ISSET(fdAccessServer, &fd_sockets)) {
+                 else if(FD_ISSET(fdAccessServer, &fd_sockets)) {
                 printf("Received something on the access server\n");
 
                 receiveUdp(fdAccessServer, bufferAccessServer, MAX_LENGTH, &addr_udp);
-
-                if(strstr(bufferAccessServer, "POPREQ") != NULL) {
-                    n = sscanf(bufferAccessServer, "%[^\n]", actionAccessServer);
+                n = sscanf(bufferAccessServer, "%[^\n]", actionAccessServer);
+                if(!strcmp(actionAccessServer,"POPREQ")){
+                    //apenas para teste
+                    //sendUdp(fdAccessServer,"POPRESP xxxx:127.0.0.1:58000 127.0.0.1:5900\n", 100, res);
+                    printf("recebi um popreq \n");
                 }
-                else if(strstr(bufferAccessServer, "POPRESP") != NULL) {
-                    n = sscanf(bufferAccessServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 
-                        actionAccessServer, buffer, availableIAmRootIP , availableIAmRootPort);
-                } 
+                
+
 
             }
 
@@ -466,7 +457,8 @@ int main(int argc, char* argv[]){
                          printf("Error while accepting new client\n");
                          exit(1);
                     }
-            }
+                    printf("recebi um novo cliente  \n");
+            } 
 
             
         }		
