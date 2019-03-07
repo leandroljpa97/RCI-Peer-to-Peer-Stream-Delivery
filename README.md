@@ -27,3 +27,8 @@ Temos de criar estados para o programa. É mais fácil trabalhar assim!
 1) Uma vez que o steamId não é propriamente o 1º parametro a ser colocado, tem de se correr do argv 1 ate a frente, e admite-se que o que nao for -i, -b , -h (...) admite-se que é streamId!.. No entanto, em que casos é que há erro no input introduzido? Se o porto do streamId for mal inserido, eu mando return 1, para ele fazer dump!!
 
 2) NAO ESTAMOS A VERIFICAR OS SSCANF'S, O RETORNO!
+3)eliminei o fd-rootServer. Ja crio sempre na funçao dump, whoisroot e remove um socket e fecho no fim, e espero pela resposta. BTW no dump há 2 cenas: nao vejo se a resposta é ERRO (se for nao e para verificar ate haver dois \n's. E a maneira que eu fiz para ler em ciclo parece-me fixe. No entanto meti um buffer de tamanho pequeno para testar(5 ou 10) e auqilo deu merda!!
+
+4) muitas coisas comentadas, pois nao sei se é para manter o status..
+5) acho que há dupla repetiçao de funçoes dos Fd's -> AddFd e initialize. 
+Fiz isto agr a noite cheio de sono
