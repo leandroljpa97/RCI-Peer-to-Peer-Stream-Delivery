@@ -5,4 +5,3 @@
 #include <errno.h>
 
 #include "APIpairComunication.h"
-

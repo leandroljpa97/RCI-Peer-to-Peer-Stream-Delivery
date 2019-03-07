@@ -15,6 +15,33 @@ void initTcp(struct addrinfo *hints_tcp){
 }
 
 
+/*
+
+ return:
+        0 = ERROR
+        fdUp = file descriptor to communicate with adjacent iamroot
+*/
+int connectToTcp(char streamIP[], char streamPort[], struct addrinfo *hints_tcp, struct addrinfo **res_tcp) {
+    int n = getaddrinfo(streamIP, streamPort, hints_tcp, res_tcp);
+    if(n != 0) {
+        printf("error getaddrinfo in TCP source server \n");
+        exit(1);
+    }
+
+    int fdUp = socket((*res_tcp)->ai_family, (*res_tcp)->ai_socktype, (*res_tcp)->ai_protocol);
+    if(fdUp == -1) {
+        printf("error creating TCP socket TCP to source server!! \n ");
+        exit(1);
+    }
+
+    n = connect(fdUp, (*res_tcp)->ai_addr, (*res_tcp)->ai_addrlen);
+    if(n == -1) {
+        printf("error in connect with TCP socket TCP in source!! \n ");
+        exit(1);
+    }
+
+    return fdUp;
+}
 
 int readTcp(int fd, char* buffer, int size) {
     char aux[128];  

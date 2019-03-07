@@ -246,10 +246,8 @@ int main(int argc, char* argv[]){
     clients.maxClients = tcpsessions;
     clients.nrAvailable = tcpsessions;
 
-    // Initiate UPD and TCP strucuture details
+    // Initiate TCP strucuture details
     initTcp(&hints_tcp);
-
-
 
     // Print all available streams
     if(dumpSignal == 1) {
@@ -259,12 +257,13 @@ int main(int argc, char* argv[]){
         exit(1);
     }
 
-    // Communicates with the root server to check to how to connect with
-    whoIsRoot(rsaddr, rsport, streamId, ipaddr, uport, ipaddrRootStream , uportRootStream);
-    printf("fiz o whoIsRoot \n");
-
     state = ROOTSERVER;
-    
+
+    // Communicates with the root server to check to how to connect with
+    whoIsRoot(rsaddr, rsport, streamId, streamIP, streamPort, ipaddr, uport, ipaddrRootStream , uportRootStream, &state, &root, &hints_accessServer, &hints_tcp, &res_tcp, &fdAccessServer, &fdUp);
+    printf("fiz o whoIsRoot - root %d, state %d\n", root, state);
+
+
     // Communication buffers        
     char buffer[MAX_LENGTH];
     char userInput[MAX_LENGTH];
@@ -279,15 +278,14 @@ int main(int argc, char* argv[]){
     
 	while(1){	
         // Clean the buffers
-        //memset(buffer,0,sizeof(buffer));
-        //memset(bufferUp,0,sizeof(bufferUp));
-        //memset(action,0,sizeof(action));
-        //memset(userInput,0,sizeof(userInput));
-        //memset(bufferRootServer,0,sizeof(bufferRootServer));
-        userInput[0] = '\0';
+        memset(buffer,0,sizeof(buffer));
         buffer[0] = '\0';
+        memset(bufferUp,0,sizeof(bufferUp));
         bufferUp[0] = '\0';
-
+        //memset(action,0,sizeof(action));
+        memset(userInput,0,sizeof(userInput));
+        userInput[0] = '\0';
+        
 		// Inits the mask of file descriptor
         initMaskStdinFd(&fd_sockets, &maxfd);
 
@@ -370,24 +368,8 @@ int main(int argc, char* argv[]){
                     printf("VOU MORRER AQUI --------------------------------------------------------------------------------------- \n ");
                     printf("stream %s:%s\n", streamIP, streamPort);
                     //o que se vai deixar é o de cima, mas meti o de baixo com o ncat, por isso a testares mete com o teu server!!
-                    n = getaddrinfo(streamIP, streamPort, &hints_tcp, &res_tcp);
-                    //n = getaddrinfo("192.168.2.10","58100",&hints_tcp, &res_tcp);
-                    if(n != 0) {
-                        printf("error getaddrinfo in TCP source server \n");
-                        exit(1);
-                    }
-
-                    fdUp = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
-                    if(fdUp == -1) {
-                        printf("error creating TCP socket TCP to source server!! \n ");
-                        exit(1);
-                    }
-
-                    n = connect(fdUp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-                    if(n == -1) {
-                        printf("error in connect with TCP socket TCP in source!! \n ");
-                        exit(1);
-                    }
+                    
+                    fdUp = connectToTcp(streamIP, streamPort, &hints_tcp, &res_tcp);
 
                     state = NORMAL; 
                     printf("o fd depois do tcp é : %d \n", fdUp);
