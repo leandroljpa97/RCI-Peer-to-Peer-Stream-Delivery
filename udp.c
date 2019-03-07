@@ -85,6 +85,7 @@ int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr){
         printf("Error in receive from UDP \n");
         exit(1);
     }
+    buffer[n] = '\0';
 
     return n;
 }

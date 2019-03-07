@@ -1,10 +1,10 @@
 #ifndef API_ROOTSERVER_H_INCLUDE
 #define API_ROOTSERVER_H_INCLUDE
 
-void whoIsRoot(int _fd, struct addrinfo *_res, char _streamId[], char _ipaddr[], char _uport[]);
+void whoIsRoot(char _rsaddr[], char _rsport[], char _streamId[], char _ipaddr[], char _uport[], char _ipaddrRootStream[] , char _uportRootStream[]);
 
-void Remove(int _fd, struct addrinfo *_res, char _streamId[]);
+void Remove(char _streamId[], char _rsaddr[], char _rsport[]);
 
-void dump(int _fd, struct addrinfo *_res);
+void dump(char _rsaddr[], char _rsport[]);
 
 #endif

@@ -19,33 +19,16 @@ int readInputArguments(int argc, char* argv[], char streamId[], char streamName[
 						char  tport[], char uport[], char rsaddr[], char rsport[],
 						int * tcpsessions, int * bestpops, int * tsecs, 
 						int *dataStream, int *debug) {
+
+    //flag to check if there is streamId in input parameters
+    int flag_streamId = 0;
     if(argc < 2) {
         // Show available Streams
         return 1;
     }
-    if(sscanf(argv[1], "%s", streamId) != 1) {
-       printf("error in streamId \n");
-       exit(1);
-    }
-    if(strlen(streamId) > 63) {
-        printf("the length of streamId is greater then 63 charact \n");
-        exit(1);
-    }
-    if(sscanf(streamId,"%[^:]:%[^:]:%s", streamName, streamIP, streamPort)!=3){
-        printf("error in streamId parameters \n");
-        exit(1);
-    }
-    // A porta que é ali indicada é a porta do servidor de stream, nao da nossa maquina logo aqui nao sabes se esta bem ou nao
-    if(!checkPort(atoi(streamPort))){
-        printf("Port not available \n");
-        exit(1);
-    }
+    
 
-    printf("o stream Name é : %s \n", streamName);
-    printf("a streamIP é : %s \n", streamIP);
-    printf("o porto é %s \n",streamPort);
-
-    for (int i = 2; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i) {
 
         if(strcmp(argv[i], "-i") == 0) {
             i++;
@@ -138,13 +121,41 @@ int readInputArguments(int argc, char* argv[], char streamId[], char streamName[
             exit(0);
         }
         else {
-            printf("Wrong input argument: %s\n", argv[i]);
-            exit(1);
-        }
+            
+            if(sscanf(argv[i], "%s", streamId) != 1) {
+                printf("error in streamId \n");
+                exit(1);
+            }
+            if(strlen(streamId) > 63) {
+                 printf("the length of streamId is greater then 63 charact \n");
+                 return 1;
+            }
+            if(sscanf(streamId,"%[^:]:%[^:]:%s", streamName, streamIP, streamPort)!=3){
+                printf("error in streamId parameters \n");
+                return 1;
+            }
+            // A porta que é ali indicada é a porta do servidor de stream, nao da nossa maquina logo aqui nao sabes se esta bem ou nao
+            if(!checkPort(atoi(streamPort))){
+                printf("Port not available \n");
+                return 1;
+            }
+
+            printf("o stream Name é : %s \n", streamName);
+            printf("a streamIP é : %s \n", streamIP);
+            printf("o porto é %s \n",streamPort);
+
+            flag_streamId = 1;
+
+            }
     }
 
     printf("Input Arguments Read\n");
-    return 0;
+
+    if(flag_streamId)
+        return 0;
+
+    //in the case that the user doesn't input streamId, return 1 to do dump
+    return 1;
 
 }
 
