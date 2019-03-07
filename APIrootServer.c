@@ -77,16 +77,18 @@ int whoIsRoot(char _rsaddr[], char _rsport[], char _streamId[], char _streamIp[]
     strcat(buffer,"\n");
     printf("o buffer no whoIsRoot é %s \n",buffer);
     
-    // Sends the information to the root server
-    sendUdp(fd, buffer, BUFFSIZE, res);
-
-    // Indicate to select to watch UDP socket
-    FD_ZERO(&fd_sockets);
-    max = fd;
-    addFd(&fd_sockets, &max, fd);
+    
 
     // Tries 3 times to get the information from root server
     do {
+        // Sends the information to the root server
+        sendUdp(fd, buffer, BUFFSIZE, res);
+
+        // Indicate to select to watch UDP socket
+        FD_ZERO(&fd_sockets);
+        max = fd;
+        addFd(&fd_sockets, &max, fd);
+        
         // Puts server in receive state with timeout option
         counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
             

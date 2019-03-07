@@ -380,7 +380,7 @@ int main(int argc, char* argv[]){
                 else if(!root){
                     //igual ao de cima!!! ->
                     //n = getaddrinfo(ipaddrRootStream , uportRootStream, &hints_tcp, &res_tcp);
-                    n = getaddrinfo("192.168.1.7","58100",&hints_tcp, &res_tcp);
+                    n = getaddrinfo("194.210.156.123","58100",&hints_tcp, &res_tcp);
 
                     if(n!=0) {
                         printf("error getaddrinfo in TCP source server \n");
