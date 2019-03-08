@@ -13,4 +13,8 @@ int sendUdp(int _fd, char data[], int size, struct addrinfo *_res);
 
 int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr);
 
+//void answerUdp(int fd, char msg[], int msgLen, struct  sockaddr * _addr);
+
+void answerUdp(int fd, char msg[], int msgLen, struct  sockaddr * _addr);
+
 #endif

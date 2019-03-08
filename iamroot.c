@@ -17,11 +17,22 @@ COMMENTS
 #include <string.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+#include <signal.h>
+
+
+
+
+
 
 #include "APIrootServer.h"
 #include "inout.h"
 #include "udp.h"
 #include "tcp.h"
+
+
 
 
 
@@ -39,16 +50,17 @@ COMMENTS
 #define ACCEPT_CHILD 4
 #define NORMAL 5
 
-typedef struct _clientList {
-    int fd;
-    struct _clientList * next;
-} clientList;
+int insertFdClient(int _newfd, int * _fdClients, int _tcpsessions){
 
-typedef struct _clients {
-    int maxClients;
-    int nrAvailable;
-    clientList *clients;
-} clients_t;
+    for(int i = 0; i< _tcpsessions; i++){
+        if(_fdClients[i] == 0){
+            _fdClients[i] = _newfd;
+            return 1;
+        }
+    }
+    return 0;
+
+}
 
 
 
@@ -62,7 +74,7 @@ void findDad(char _ipaddr[], char _uport[], char _availableIAmRootIP[] , char _a
     fd_set fd_sockets;  
     struct timeval* t1 = NULL;
     struct timeval t2;
-    char buffer[MAX_LENGTH], action[MAX_LENGTH];
+    char buffer[MAX_LENGTH], buffer_aux[MAX_LENGTH],action[MAX_LENGTH];
 
     t1 = NULL;
     t2.tv_usec = 0;
@@ -102,8 +114,12 @@ void findDad(char _ipaddr[], char _uport[], char _availableIAmRootIP[] , char _a
             int n = receiveUdp(fd, buffer,MAX_LENGTH, &addr);
             if(strstr(buffer, "POPRESP") != NULL) {
                     n = sscanf(buffer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 
-                        action, buffer, _availableIAmRootIP , _availableIAmRootPort);
+                        action, buffer_aux, _availableIAmRootIP , _availableIAmRootPort);
                 } 
+
+
+                printf("recebi um popresp \n");
+                printf("_availableIAmRootPort:%s availableIAmRootPort: %s \n",_availableIAmRootIP , _availableIAmRootPort );
 
             printf("%s", buffer);  
         }
@@ -207,13 +223,13 @@ int main(int argc, char* argv[]){
     int dataStream = 1;
     int debug = 0;
     int dumpSignal = 0;
-
-    clients_t clients;
-        
+    
+    int clientsAvailable = 1;        
     // Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
     int fdUp = -1, fdAccessServer = -1, fdTcpServer = -1;
-    int addrlenTcpServer, newfd;
+    int newfd;
+    unsigned int addrlenTcpServer = sizeof(struct sockaddr);
     
     // Mask of active file descriptors
     fd_set fd_sockets;  
@@ -252,8 +268,15 @@ int main(int argc, char* argv[]){
                         uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs, 
                         &dataStream, &debug);
 
-    clients.maxClients = tcpsessions;
-    clients.nrAvailable = tcpsessions;
+   clientsAvailable = tcpsessions;
+   int * fdClients = (int*)malloc(tcpsessions*sizeof(int));
+   if(fdClients == NULL){
+     printf("error alocating vector fdClients \n");
+     exit(0);
+   }
+    for (int i = 0; i < tcpsessions; i++)
+        fdClients[i] = 0;
+
 
     // Initiate TCP strucuture details
     initTcp(&hints_tcp);
@@ -307,11 +330,30 @@ int main(int argc, char* argv[]){
 
                 // if the node isn't root, it establish a connection with the root 
                 else if(!root){
-                    findDad(ipaddrRootStream, uportRootStream, availableIAmRootIP , availableIAmRootPort);
-                    
+                    findDad(ipaddrRootStream, uportRootStream, availableIAmRootIP , availableIAmRootPort);                    
+
+                    int nb = getaddrinfo(availableIAmRootIP, availableIAmRootPort, &hints_tcp, &res_tcp);
+                    if(nb != 0) {
+                        printf("error getaddrinfo in TCP source server \n");
+                        exit(1);
+                     }
+
+                    fdUp = socket((res_tcp)->ai_family, (res_tcp)->ai_socktype, (res_tcp)->ai_protocol);
+                    if(fdUp == -1) {
+                        printf("error creating TCP socket TCP to source server...2. \n ");
+                        exit(1);
+                    }
+
+                    nb = connect(fdUp, (res_tcp)->ai_addr, (res_tcp)->ai_addrlen);
+                    if(n == -1) {
+                        printf("error in connect with TCP socket TCP in source.... \n ");
+                        exit(1);
+                    }
 
 
-                    state = FIND_DAD;
+                    state = ACCEPT_CHILD; 
+                    printf("o fd depois do tcp é : %d \n", fdUp);
+
                 }  
              }
 
@@ -319,7 +361,7 @@ int main(int argc, char* argv[]){
  
 
     // Communication buffers        
-    char buffer[MAX_LENGTH];
+    char buffer[MAX_LENGTH], bufferStream[MAX_LENGTH];
     char userInput[MAX_LENGTH];
     
     char bufferUp[PACKAGETCP];
@@ -327,6 +369,8 @@ int main(int argc, char* argv[]){
     // Buffers for Access Server Comunication
     char bufferAccessServer[MAX_LENGTH];
     char actionAccessServer[50];
+    //send to new pair
+    char bufferWelcome[BUFFSIZE];
    
     
 	while(1){
@@ -368,6 +412,8 @@ int main(int argc, char* argv[]){
         //memset(action,0,sizeof(action));
         memset(userInput,0,sizeof(userInput));
         userInput[0] = '\0';
+        memset(bufferStream,0,sizeof(userInput));
+        bufferStream[0] = '\0';
         
 		// Inits the mask of file descriptor
         initMaskStdinFd(&fd_sockets, &maxfd);
@@ -418,10 +464,12 @@ int main(int argc, char* argv[]){
                 else 
                     interpRootServerMsg(userInput, streamId, rsaddr, rsport);    
             }
+
+            
            
             
             // When receives messages from the access server
-                 else if(FD_ISSET(fdAccessServer, &fd_sockets)) {
+                 else if( fdAccessServer!= -1 && FD_ISSET(fdAccessServer, &fd_sockets)) {
                 printf("Received something on the access server\n");
 
                 receiveUdp(fdAccessServer, bufferAccessServer, MAX_LENGTH, &addr_udp);
@@ -430,6 +478,11 @@ int main(int argc, char* argv[]){
                     //apenas para teste
                     //sendUdp(fdAccessServer,"POPRESP xxxx:127.0.0.1:58000 127.0.0.1:5900\n", 100, res);
                     printf("recebi um popreq \n");
+
+                    //chamar a funçao que acha qual é o ponto de acesso
+                    answerUdp(fdAccessServer, "POPRESP xxxx:127.0.0.1:58000 127.0.0.1:59002\n",100, (struct sockaddr *)&addr_udp);
+                    printf("mandei um popresp \n");
+
                 }
                 
 
@@ -437,27 +490,46 @@ int main(int argc, char* argv[]){
             }
 
             // When receives a message from up on the tree
-            else if(FD_ISSET(fdUp, &fd_sockets)){
+            else if(fdUp != -1 && FD_ISSET(fdUp, &fd_sockets)){
                 printf("i received something from TCP \n");
 
                 readTcp(fdUp, bufferUp, PACKAGETCP);
 
                 printf("o buffer tcp é: %s \n", bufferUp);
                 if(root){
+                    strcpy(bufferStream, "DATA \n");
+                    strcat(bufferStream,bufferUp);
                     printf("i received stream and from sourceServer\n");
                 }
                 else if(!root){
                     printf("i received from my dad \n");
                 }
-            } 
+            }  
 
-            else if(FD_ISSET(fdTcpServer,&fd_sockets)){
+            else if(fdTcpServer != -1 && FD_ISSET(fdTcpServer,&fd_sockets)){
                 printf("received newClient \n");
                  if((newfd = accept(fdTcpServer, (struct sockaddr *) &addr_tcpServer, &addrlenTcpServer)) == -1) {
                          printf("Error while accepting new client\n");
                          exit(1);
                     }
-                    printf("recebi um novo cliente  \n");
+                    if(clientsAvailable > 0)
+                        if(insertFdClient(newfd,fdClients, tcpsessions)){
+                            strcpy(bufferWelcome,"WE ");
+                            strcat(bufferWelcome,streamId);
+                            strcat(bufferWelcome,"\n");
+                            strcat(bufferWelcome,"\0");
+
+                            printf("bufferWelcome size é: %d \n",strlen(bufferWelcome));
+                            writeTcp(newfd,bufferWelcome,strlen(bufferWelcome)-1);
+                            clientsAvailable--;
+                            bufferWelcome[0] = '\0';
+                            printf("recebi um novo cliente  \n");
+                        }
+                        else{
+                            writeTcp(fdUp,"RE",strlen("RE"));
+
+                        }
+
             } 
 
             

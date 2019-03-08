@@ -90,3 +90,14 @@ int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr){
     return n;
 }
 
+void answerUdp(int fd, char msg[], int msgLen, struct  sockaddr * _addr){
+
+int n;
+
+n = sendto(fd, msg, msgLen, 0, _addr, sizeof(*_addr));
+if(n == -1){
+    printf("error sendingTo in answerUp");
+    exit(1);
+    }
+
+}
