@@ -1,16 +1,16 @@
 #ifndef UDP_H_INCLUDE
 #define UDP_H_INCLUDE
 
-void initUdp(struct addrinfo *_hints);
+void initUDPclientStructure(struct addrinfo *hints);
 
-void initUdpServer(struct addrinfo *_hints);
+struct addrinfo * createUPDsocket(int *fd, char _ip[], char _port[]);
 
-struct addrinfo * createUdpSocket(int *_fdUdp, char ip[], char port[], struct addrinfo * _hints_udp);
+void initUDPserverStructure(struct addrinfo *_hints);
 
-int createUpdAccessServer(char port[], struct addrinfo *_hints);
+int initUDPserver();
 
 int sendUdp(int _fd, char data[], int size, struct addrinfo *_res);
 
-int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr);
+int receiveUdp(int _fd, char buffer[], int size);
 
 #endif

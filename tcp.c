@@ -6,12 +6,13 @@
 #include <unistd.h>
 
 #include "tcp.h"
+#include "utils.h"
 
-void initTcp(struct addrinfo *hints_tcp){
-    memset(hints_tcp, 0 ,sizeof(*hints_tcp));
-    hints_tcp->ai_family=AF_INET;    
-    hints_tcp->ai_socktype=SOCK_STREAM;   
-    hints_tcp->ai_flags= AI_NUMERICHOST | AI_NUMERICSERV;
+void initTcp(struct addrinfo *_hints){
+    memset(_hints, 0 ,sizeof(*_hints));
+    _hints->ai_family=AF_INET;    
+    _hints->ai_socktype=SOCK_STREAM;   
+    _hints->ai_flags= AI_NUMERICHOST | AI_NUMERICSERV;
 }
 
 
@@ -21,20 +22,25 @@ void initTcp(struct addrinfo *hints_tcp){
         0 = ERROR
         fdUp = file descriptor to communicate with adjacent iamroot
 */
-int connectToTcp(char streamIP[], char streamPort[], struct addrinfo *hints_tcp, struct addrinfo **res_tcp) {
-    int n = getaddrinfo(streamIP, streamPort, hints_tcp, res_tcp);
+int connectToTcp() {
+    
+	struct addrinfo hints, *res_tcp;
+
+	initTcp(&hints);
+
+    int n = getaddrinfo(streamIp, streamPort, &hints, &res_tcp);
     if(n != 0) {
         printf("error getaddrinfo in TCP source server \n");
         exit(1);
     }
 
-    int fdUp = socket((*res_tcp)->ai_family, (*res_tcp)->ai_socktype, (*res_tcp)->ai_protocol);
+    int fdUp = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
     if(fdUp == -1) {
         printf("error creating TCP socket TCP to source server!! \n ");
         exit(1);
     }
 
-    n = connect(fdUp, (*res_tcp)->ai_addr, (*res_tcp)->ai_addrlen);
+    n = connect(fdUp, res_tcp->ai_addr, res_tcp->ai_addrlen);
     if(n == -1) {
         printf("error in connect with TCP socket TCP in source!! \n ");
         exit(1);

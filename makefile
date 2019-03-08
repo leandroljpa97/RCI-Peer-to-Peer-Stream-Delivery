@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS= -O2 -I. -Wall -std=gnu11
-DEPS = accessServer.h APIpairComunication.h APIrootServer.h inout.h udp.h tcp.h iamroot.h
-OBJ = accessServer.c APIpairComunication.c APIrootServer.c inout.c udp.c tcp.c iamroot.c
+DEPS = utils.h upd.h tcp.h APIrootServer.h iamroot.h
+OBJ = utils.c udp.c tcp.c APIrootServer.c iamroot.c
 
 default: iamroot
 

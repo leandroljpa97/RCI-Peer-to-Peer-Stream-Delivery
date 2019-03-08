@@ -1,0 +1,52 @@
+#ifndef UTILS_H_INCLUDE
+#define UTILS_H_INCLUDE
+
+#define TRIES 3
+#define TIMEOUT 2
+#define TIMEOUT_REMOVE 1
+
+#define BUFFER_SIZE 256
+#define PACKAGETCP 256
+
+#define DEFAULT_STREAM_PORT "00000"
+#define DEFAULT_TPORT "59000"
+#define DEFAULT_UPORT "59000"
+#define DEFAULT_RSADDR "193.136.138.142"
+#define DEFAULT_RSPORT "59000"
+#define DEFAULT_TCP_SESSIONS 1
+#define DEFAULT_BEST_POPS 1
+#define DEFAULT_TSECS 5
+#define DEFAULT_DATA_STREAM 1
+#define DEFAULT_DEBUG 0
+
+extern char streamId[];
+extern char streamIp[];
+extern char streamName[];
+extern char streamPort[];
+extern char ipaddr[];
+extern char tport[];
+extern char uport[];
+extern char rsaddr[];
+extern char rsport[];
+extern int tcpsessions;
+extern int bestpops;
+extern int tsecs;
+extern int dataStream;
+extern int debug;
+
+void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd);
+
+void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd);
+
+int checkPort(int _port);
+
+int readInputArguments(int argc, const char* argv[], char streamId[], char streamName[],
+    					char streamIP[], char streamPort[], char ipaddr[], 
+						char  tport[], char uport[], char rsaddr[], char rsport[],
+						int * tcpsessions, int * bestpops, int * tsecs, 
+						int *dataStream, int *debug);
+
+
+
+
+#endif

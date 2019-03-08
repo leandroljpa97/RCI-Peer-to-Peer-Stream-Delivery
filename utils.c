@@ -4,8 +4,41 @@
 #include <string.h>
 #include <errno.h>
 
-#include "inout.h"
+#include "utils.h"
 
+#define IP_SIZE 16
+
+// Defualt init variables
+char streamId[64];
+char streamName[44];
+char streamIp[IP_SIZE];
+char streamPort[] = DEFAULT_STREAM_PORT;
+char ipaddr[IP_SIZE];
+char tport[] = DEFAULT_TPORT;
+char uport[] = DEFAULT_UPORT;
+char rsaddr[] = DEFAULT_RSADDR;
+char rsport[] = DEFAULT_RSPORT;
+int tcpsessions = DEFAULT_TCP_SESSIONS;
+int bestpops = DEFAULT_BEST_POPS;
+int tsecs = DEFAULT_TSECS;
+int dataStream = DEFAULT_DATA_STREAM;
+int debug = DEFAULT_DEBUG;
+
+
+void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd) {
+    FD_ZERO(_fd_sockets);
+    FD_SET(0,_fd_sockets);
+    _maxfd = 0;
+}
+
+/*
+ * addFd: add a new file descriptor to be controlled by select
+ */
+void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd) {
+    FD_SET(_fd, _fd_sockets);
+    *_maxfd = _fd;
+}
+        
 
 int checkPort(int _port){
     if(_port>1024 && _port <65535)
@@ -14,7 +47,7 @@ int checkPort(int _port){
 }
 
 
-int readInputArguments(int argc, char* argv[], char streamId[], char streamName[],
+int readInputArguments(int argc, const char* argv[], char streamId[], char streamName[],
     					char streamIP[], char streamPort[], char ipaddr[], 
 						char  tport[], char uport[], char rsaddr[], char rsport[],
 						int * tcpsessions, int * bestpops, int * tsecs, 
@@ -27,7 +60,6 @@ int readInputArguments(int argc, char* argv[], char streamId[], char streamName[
         return 1;
     }
     
-
     for (int i = 1; i < argc; ++i) {
 
         if(strcmp(argv[i], "-i") == 0) {
@@ -140,16 +172,10 @@ int readInputArguments(int argc, char* argv[], char streamId[], char streamName[
                 return 1;
             }
 
-            printf("o stream Name é : %s \n", streamName);
-            printf("a streamIP é : %s \n", streamIP);
-            printf("o porto é %s \n",streamPort);
-
             flag_streamId = 1;
 
             }
     }
-
-    printf("Input Arguments Read\n");
 
     if(flag_streamId)
         return 0;

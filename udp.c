@@ -3,70 +3,73 @@
 #include <netdb.h>
 #include <string.h>
 #include <errno.h>
+
 #include "udp.h"
+#include "utils.h"
 
-#define BUFFSIZE 128
-
-void initUdpServer(struct addrinfo *_hints) { 
-    memset(_hints, 0 ,sizeof(*_hints));
-    _hints->ai_family = AF_INET;    //IPv4
-    _hints->ai_socktype = SOCK_DGRAM;   //UPD Socket
-    _hints->ai_flags = AI_PASSIVE|AI_NUMERICSERV;;
-}
-
-void initUdp(struct addrinfo *_hints) {
+void initUDPclientStructure(struct addrinfo *_hints) {
 	memset(_hints, 0 ,sizeof(*_hints));
-    _hints->ai_family=AF_INET;    //IPv4
-    _hints->ai_socktype=SOCK_DGRAM;   //UPD Socket
-    _hints->ai_flags= AI_NUMERICSERV;
+    _hints->ai_family = AF_INET;    	//IPv4
+    _hints->ai_socktype = SOCK_DGRAM;  //UPD Socket
+    _hints->ai_flags = AI_PASSIVE|AI_NUMERICSERV;
 }
 
+struct addrinfo * createUPDsocket(int *fd, char _ip[], char _port[]) {
+	struct addrinfo hints, *res;
 
+	initUDPclientStructure(&hints);
 
-struct addrinfo * createUdpSocket(int *_fdUdp, char ip[], char port[], struct addrinfo * _hints_udp) {
-	struct addrinfo * res;
-
-	int n = getaddrinfo(ip, port, _hints_udp, &res);
-   	if(n != 0) {
-        printf("Error in getaddrinfo from ROOT_SERVER \n");
+	int n = getaddrinfo(_ip, _port, &hints, &res);
+    if(n != 0) {
+        printf("Error on getaddrinfo\n");
         exit(1);
     }
 
-    *_fdUdp = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(*_fdUdp == -1) {
-        printf("Error creating socket UDP to root_server \n");
+    *fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if(*fd == -1) {
+        printf("Error on socket creation\n");
         exit(1);
     }
 
     return res;
 }
 
-int createUpdAccessServer(char port[], struct addrinfo *_hints) {
-    struct addrinfo * res;
+void initUDPserverStructure(struct addrinfo *_hints) {
+	memset(_hints, 0 ,sizeof(*_hints));
+    _hints->ai_family = AF_INET;    	//IPv4
+    _hints->ai_socktype = SOCK_DGRAM;  //UPD Socket
+    _hints->ai_flags = AI_NUMERICSERV;
+}
 
-    int n = getaddrinfo(NULL, port, _hints, &res);
-    if(n != 0) {
-        printf("Error in getaddrinfo from ACCESS_SERVER \n");
+int initUDPserver() {
+	int fd;
+	struct addrinfo hints, *res;
+
+	initUDPserverStructure(&hints);
+
+	int n = getaddrinfo(NULL, uport, &hints, &res);
+    if(n!=0) {
+        /*error*/
         exit(1);
     }
 
-    int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(fd == -1) {
-        printf("Error creating socket UDP to ACCESS_SERVER \n");
+    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if(fd==-1) {
+        /*error*/
         exit(1);
     }
 
     n = bind(fd, res->ai_addr, res->ai_addrlen);
     if(n == -1) {
-        printf("Erro binding ACCESS_SERVER\n");
+        printf("Erro binding\n");
         exit(1);
     }
 
-    printf("Access server Created\n");
-    return fd;
+	return fd;
 }
 
-int sendUdp(int _fd, char data[], int size, struct addrinfo *_res ){
+
+int sendUdp(int _fd, char data[], int size, struct addrinfo *_res ) {
 	int n;
 	n = sendto(_fd, data, size, 0 , _res->ai_addr, _res->ai_addrlen);
 	if (n == -1) {
@@ -77,10 +80,11 @@ int sendUdp(int _fd, char data[], int size, struct addrinfo *_res ){
 	return n;
 }
 
-int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr){
-	socklen_t addrlen = sizeof(* _addr);
+int receiveUdp(int _fd, char buffer[], int size) {
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
 
-	int n = recvfrom(_fd, buffer, size, 0, (struct sockaddr *) _addr, &addrlen);
+	int n = recvfrom(_fd, buffer, size, 0, (struct sockaddr *) &addr, &addrlen);
     if(n == -1) {
         printf("Error in receive from UDP \n");
         exit(1);
@@ -89,4 +93,3 @@ int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr){
 
     return n;
 }
-
