@@ -8,6 +8,6 @@ int connectToTcp();
 
 int readTcp(int _fd, char* buffer, int size);
 
-void writeTcp(int _fd, char *data, int size);
+int writeTcp(int _fd, char *data, int size);
 
 #endif

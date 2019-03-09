@@ -20,6 +20,8 @@ COMMENTS
 
 #include "utils.h"
 #include "APIrootServer.h"
+#include "APIpairComunication.h"
+#include "APIaccessServer.h"
 #include "udp.h"
 #include "tcp.h"
 
@@ -38,12 +40,6 @@ COMMENTS
 #define DEFAULT_DATA_STREAM 1
 #define DEFAULT_DEBUG 0
 
-typedef struct _clients {
-	int *fd;
-	int *mask;
-	int available;
-	int bestpops;
-} clients_t;
 
 
 void interpRootServerMsg(char _data[]) {
@@ -102,6 +98,8 @@ void interpRootServerMsg(char _data[]) {
 int main(int argc, char const *argv[])
 {
 	int root = 0;
+
+    uint16_t _queryID = 0;
 	
 	// Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
@@ -121,8 +119,6 @@ int main(int argc, char const *argv[])
 
     // Return state of the select
     int counter= 0;
-
-
 
 	// Read Input Arguments of the program and set the default variables
     int dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIp, streamPort, ipaddr, tport, 
@@ -209,8 +205,8 @@ int main(int argc, char const *argv[])
                 receiveUdp(fdAccessServer, bufferAccessServer, BUFFER_SIZE);
 
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
-                    if(sscanf(bufferAccessServer, "%[^\n]", actionAccessServer) == 0) 
-                    	printf("Error on message from access server\n");
+
+                        int status = POPREQ(clients);
                 }
                 else if(strstr(bufferAccessServer, "POPRESP") != NULL) {
                     if(sscanf(bufferAccessServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 

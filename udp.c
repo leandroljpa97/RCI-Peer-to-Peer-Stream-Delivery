@@ -69,7 +69,7 @@ int initUDPserver() {
 }
 
 
-int sendUdp(int _fd, char data[], int size, struct addrinfo *_res ) {
+int sendUdp(int _fd, char data[], int size, struct addrinfo *_res) {
 	int n;
 	n = sendto(_fd, data, size, 0 , _res->ai_addr, _res->ai_addrlen);
 	if (n == -1) {

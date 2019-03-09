@@ -1,6 +1,9 @@
 #ifndef UTILS_H_INCLUDE
 #define UTILS_H_INCLUDE
 
+// Library for special types of Int
+#include <stdint.h>
+
 #define TRIES 3
 #define TIMEOUT 2
 #define TIMEOUT_REMOVE 1
@@ -33,6 +36,14 @@ extern int bestpops;
 extern int tsecs;
 extern int dataStream;
 extern int debug;
+
+typedef struct _clients {
+	int *fd;
+	int *mask;
+	int available;
+	int bestpops;
+} clients_t;
+
 
 void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd);
 

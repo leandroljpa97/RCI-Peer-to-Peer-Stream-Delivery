@@ -64,7 +64,7 @@ int readTcp(int fd, char* buffer, int size) {
     return n;
 }
 
-void writeTcp(int _fd, char *data, int size)
+int writeTcp(int _fd, char *data, int size)
 {
     int nSended;   
     int nBytes;     
@@ -84,5 +84,5 @@ void writeTcp(int _fd, char *data, int size)
         data += nSended;
     }
 
-    data -= nBytes;
+    return nBytes;
 }
