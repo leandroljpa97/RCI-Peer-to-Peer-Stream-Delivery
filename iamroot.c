@@ -21,6 +21,7 @@ COMMENTS
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <signal.h>
+#include <math.h>
 
 
 
@@ -49,6 +50,32 @@ COMMENTS
 #define FIND_DAD 3
 #define ACCEPT_CHILD 4
 #define NORMAL 5
+
+void ctrl_c_callback_handler(int signum)
+{
+    printf("sai por CTRL_C \n ");
+    exit(0);
+
+}
+
+void error_confirmation(char*s)
+{
+        printf("%s \n",s);
+        exit(EXIT_FAILURE);
+}
+
+void initializations(){
+    void (*ctrl_c)(int);
+    ctrl_c = signal(SIGINT, ctrl_c_callback_handler);
+
+    void (*close_socket)(int);
+    close_socket = signal(SIGPIPE, SIG_IGN);
+
+    if(ctrl_c == SIG_ERR || close_socket == SIG_ERR)
+        error_confirmation("Could not handle SIGINT or SIGPIPE");
+
+
+}
 
 int insertFdClient(int _newfd, int * _fdClients, int _tcpsessions){
 
@@ -200,11 +227,25 @@ void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd) {
 /*
  * addFd: add a new file descriptor to be controlled by select
  */
-void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd) {
+void addFd(fd_set * _fd_sockets, int * _maxfd, int _fd) {
     FD_SET(_fd, _fd_sockets);
     *_maxfd = _fd;
 }
-        
+
+void DecToHexStr(int dec, char *str){
+ sprintf(str, "%X", dec);
+}
+
+void sendStreamToChilds(char * _bufferStream, int * _fdClients, int _tcpsessions){
+    for(int i = 0; i < _tcpsessions; i++){
+        printf("_fdClients[%d] é %d \n",i,_fdClients[i]);
+        if(_fdClients[i] != 0){
+            writeTcp(_fdClients[i], _bufferStream, strlen(_bufferStream));
+        }
+    }
+
+}
+
 
 int main(int argc, char* argv[]){
     // Defualt init variables
@@ -259,9 +300,15 @@ int main(int argc, char* argv[]){
     char availableIAmRootIP[16];
     char availableIAmRootPort[6];
 
+    char strHexa[20];
+    int sizeStream;
+    char contentStream[BUFFSIZE];
+
 	//SOCKET UDP and TCP ! 
     struct addrinfo hints_tcp, *res_tcp, hints_accessServer, hints_tcpServer, *res_tcpServer;
-    struct sockaddr_in addr_udp, addr_tcpServer;   
+    struct sockaddr_in addr_udp, addr_tcpServer;    
+
+    initializations();
 
     // Read Input Arguments of the program and set the default variables
     dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIP, streamPort, ipaddr, tport, 
@@ -371,6 +418,7 @@ int main(int argc, char* argv[]){
     char actionAccessServer[50];
     //send to new pair
     char bufferWelcome[BUFFSIZE];
+    char actionData[20];
    
     
 	while(1){
@@ -465,9 +513,6 @@ int main(int argc, char* argv[]){
                     interpRootServerMsg(userInput, streamId, rsaddr, rsport);    
             }
 
-            
-           
-            
             // When receives messages from the access server
                  else if( fdAccessServer!= -1 && FD_ISSET(fdAccessServer, &fd_sockets)) {
                 printf("Received something on the access server\n");
@@ -480,7 +525,7 @@ int main(int argc, char* argv[]){
                     printf("recebi um popreq \n");
 
                     //chamar a funçao que acha qual é o ponto de acesso
-                    answerUdp(fdAccessServer, "POPRESP xxxx:127.0.0.1:58000 127.0.0.1:59002\n",100, (struct sockaddr *)&addr_udp);
+                    answerUdp(fdAccessServer, "POPRESP xxxy:127.0.0.1:58000 127.0.0.1:59000\n",100, (struct sockaddr *)&addr_udp);
                     printf("mandei um popresp \n");
 
                 }
@@ -497,12 +542,24 @@ int main(int argc, char* argv[]){
 
                 printf("o buffer tcp é: %s \n", bufferUp);
                 if(root){
-                    strcpy(bufferStream, "DATA \n");
-                    strcat(bufferStream,bufferUp);
-                    printf("i received stream and from sourceServer\n");
+                        strcpy(bufferStream, "DATA ");
+                        DecToHexStr(strlen(bufferUp)-1, strHexa);
+                        strcat(bufferStream,strHexa);
+                        strHexa[0] = '\0';
+                        strcat(bufferStream,"\n");
+                        strcat(bufferStream,bufferUp);
+                        sendStreamToChilds(bufferStream,fdClients, tcpsessions);
+                        printf("i received stream and from sourceServer\n");
                 }
                 else if(!root){
                     printf("i received from my dad \n");
+                    n = sscanf(bufferUp,"%[^ ] %[^\n]\n %s",actionData,strHexa,contentStream);
+                    if(n == 3 && !strcmp(actionData,"DATA")){
+                            printf("%s \n",contentStream);
+                            sendStreamToChilds(bufferStream,fdClients, tcpsessions);
+
+                        }
+                    
                 }
             }  
 
@@ -512,7 +569,7 @@ int main(int argc, char* argv[]){
                          printf("Error while accepting new client\n");
                          exit(1);
                     }
-                    if(clientsAvailable > 0)
+                    if(clientsAvailable > 0){
                         if(insertFdClient(newfd,fdClients, tcpsessions)){
                             strcpy(bufferWelcome,"WE ");
                             strcat(bufferWelcome,streamId);
@@ -529,6 +586,10 @@ int main(int argc, char* argv[]){
                             writeTcp(fdUp,"RE",strlen("RE"));
 
                         }
+                    }
+                    else 
+                        writeTcp(fdUp,"RE",strlen("RE"));
+
 
             } 
 
