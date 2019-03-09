@@ -13,21 +13,42 @@
 #include "APIaccessServer.h"
 #include "utils.h"
 #include "tcp.h"
-
+#include "udp.h"
 
 /*
  POPREQ
- sends the message to all clients on the tree
+ sends the message to clients on the tree
  return
- -1 - sucess
- otherwise the file descriptor of the client that didn't respond
+ -1 - error
+ otherwise number of bytes sent
  */
-int POPREQ(clients_t clients) {
+int POPREQ(int _fd, struct addrinfo *res) {
+	int n = 0;
 
-	return -1;
+	if(sendUdp(_fd, "POPREQ\n", strlen("POPREQ\n"), res) != strlen("POPREQ\n")) {
+		return -1;
+	}
+	return n;
 }
 
-int POPRESP(int _fdUP) {
+int POPRESP(int _fd, struct sockaddr_in *_addr, char _ipaddr[], char _uport[]) {
+	char buffer[BUFFER_SIZE];
+	// Creates WHOISROOT message
+    strcpy(buffer, "POPRESP ");
+    strcat(buffer, streamId);
+    strcat(buffer, " ");
+    strcat(buffer, _ipaddr);
+    strcat(buffer, ":");
+    strcat(buffer, _uport);
+    strcat(buffer, "\n");
+    printf("o buffer no POPRESP é %s\n", buffer);
 
+    // finds the size of the WHOISROOT message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    answerUdp(_fd, buffer, i + 1, (struct sockaddr *) _addr);
+    printf("mandei um popresp \n");
+	
 	return 1;
 }

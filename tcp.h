@@ -2,9 +2,15 @@
 #define TCP_H_INCLUDE
 
 
-void initTcp(struct addrinfo *hints_tcp);
+void initTcp(struct addrinfo *_hints);
 
-int connectToTcp();
+void initTcpServer(struct addrinfo *_hints);
+
+int connectToStream();
+
+int connectToTcp(char _availableIAmRootIP[], char _availableIAmRootPort[]);
+
+int createTcpServer();
 
 int readTcp(int _fd, char* buffer, int size);
 

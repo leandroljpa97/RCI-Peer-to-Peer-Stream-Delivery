@@ -11,9 +11,89 @@
 #include <netdb.h>
 
 #include "APIrootServer.h"
+#include "APIaccessServer.h"
 #include "utils.h"
 #include "udp.h"
 #include "tcp.h"
+
+int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAmRootIP[] , char _availableIAmRootPort[]){
+    struct sockaddr_in addr;
+    int fd = -1;
+    fd_set fd_sockets;  
+    struct timeval *t1 = NULL;
+    struct timeval t2;
+    char buffer[BUFFER_SIZE], buffer_aux[BUFFER_SIZE], action[BUFFER_SIZE];
+
+    setTimeOut(t1, &t2);
+
+    // Initiates UPD socket for communication with the accessServer
+    struct addrinfo *res = createUPDsocket(&fd, _accessServerIP, _accessServerPort);
+
+    // Tries 3 times to send POPREQ message to the AccessServer
+    int tries = 0;
+    int counter = 0;
+    int max = fd;
+    do {
+        POPREQ(fd, res);
+
+        // Indicate to select to watch UDP socket
+        FD_ZERO(&fd_sockets);
+        max = fd;
+        addFd(&fd_sockets, &max, fd);
+    
+        // Puts server in receive state with timeout option
+        counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);     
+            
+        if(counter < 0){
+            perror("Error in select"); 
+            close(fd);
+            exit(0);
+            }
+        // if counter = 0, any response was received
+        if(!counter){
+            printf("timeout...\n");
+        }
+        tries++;
+    } while(counter < 1 && tries < TRIES);
+
+    if(tries >= TRIES) {
+        // FUNCTION TO TURN OFF EVERYTHING
+        perror("Error POPREQ"); 
+        freeaddrinfo(res);
+        close(fd);
+        return 0;
+    }
+
+    printf("POPREQ msg sent \n");
+
+    if(FD_ISSET(fd, &fd_sockets)){
+        int n = receiveUdp(fd, buffer, BUFFER_SIZE, &addr);
+        if(strstr(buffer, "POPRESP") != NULL) {
+            n = sscanf(buffer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 
+                action, buffer_aux, _availableIAmRootIP , _availableIAmRootPort);
+            if(n != 4) {
+                printf("ERROR on POPRESP\n");
+            }
+        } 
+        else {
+            printf("ERROR on receiving to who to connect to\n");
+            // EXIT PROGRAM
+            exit(0);
+        }
+
+        printf("recebi um popresp \n");
+        printf("_availableIAmRootPort:%s availableIAmRootPort: %s \n",_availableIAmRootIP , _availableIAmRootPort );
+
+        printf("%s", buffer);  
+    }
+
+    freeaddrinfo(res);
+
+    close(fd);
+
+    return 1;
+}
+
 
 
 /*
@@ -42,10 +122,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
     // Variables for select time out
     struct timeval* t1 = NULL, t2;
 
-    t1 = NULL;
-	t2.tv_usec = 0;
-	t2.tv_sec = TIMEOUT;
-	t1 = &t2;
+    setTimeOut(t1, &t2);
 
 	// Creates an UDP socket for communication with root server
 	struct addrinfo * res = createUPDsocket(&fd, rsaddr, rsport);
@@ -64,20 +141,21 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    // Sends the information to the root server
-    sendUdp(fd, buffer, i + 1, res);
-
-    // Indicate to select to watch UDP socket
-    FD_ZERO(&fd_sockets);
-    int max = fd;
-    addFd(&fd_sockets, &max, fd);
-    
     // Tries 3 times to get the information from root server
     int tries = 0;
     int counter = 0;
+    int max = fd;
     do {
+        // Sends the information to the root server
+        sendUdp(fd, buffer, i + 1, res);
+
+        // Indicate to select to watch UDP socket
+        FD_ZERO(&fd_sockets);
+        max = fd;
+        addFd(&fd_sockets, &max, fd);
+    
         // Puts server in receive state with timeout option
-        counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
+        counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);     
             
         if(counter < 0){
             perror("Error in select"); 
@@ -91,10 +169,20 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         tries++;
     } while(counter < 1 && tries < TRIES);
 
+    if(tries >= TRIES) {
+        // FUNCTION TO TURN OFF EVERYTHING
+        perror("Error wgo is root"); 
+        freeaddrinfo(res);
+        close(fd);
+        exit(0);
+    }
+
     if(FD_ISSET(fd, &fd_sockets)){
+        struct sockaddr_in addr;
+
     	// Receives the response from the root server
-        receiveUdp(fd, bufferRootServer, BUFFER_SIZE);
-        sscanf(bufferRootServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", action, stream, accessServerIP ,accessServerPort);
+        receiveUdp(fd, bufferRootServer, BUFFER_SIZE, &addr);
+        sscanf(bufferRootServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", action, stream, accessServerIP, accessServerPort);
         printf("a action é: %s \n", action);
 
         // If the tree is empty, the program is the root stream. Change the state to root and goes to connect to a stream
@@ -106,7 +194,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             *fdAccessServer = initUDPserver();
 
             // Access to stream to start transmission
-            *fdUp = connectToTcp();
+            *fdUp = connectToStream();
         }
         // Receives the information that there's already a root on the tree 
         // and needs to go to the access server to acquire the correct IP and port
@@ -117,7 +205,14 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
                     
             *root = 0;
 
-            // Connect to access server - implement API
+            char availableIAmRootIP[IP_SIZE], availableIAmRootPort[BUFFER_SIZE];
+
+            // Communicates with access server to understand to where to connect
+            if(findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == 0) {
+                WHOISROOT(root, fdAccessServer, fdUp);
+            }
+
+            *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
         }
         else if(!strcmp(action, "ERROR")) {
             //aqui a bufferRootServer é a mensagem de erro!!
@@ -169,48 +264,49 @@ int REMOVE() {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
+    // Tries 3 times to get the information from root server
+    int counter = 0;
+
     // Sends the information to the root server
     sendUdp(fd, buffer, i + 1, res);
 
     // Indicate to select to watch UDP socket
     FD_ZERO(&fd_sockets);
     int max = fd;
-    addFd(&fd_sockets, &max, fd);
-    
-    // Tries 3 times to get the information from root server
-    int tries = 0;
-    int counter = 0;
-    do {
-        // Puts server in receive state with timeout option
-        counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
-            
-        if(counter < 0){
-            perror("Error in select"); 
-            close(fd);
-            exit(0);
-            }
-        // if counter = 0, any response was received
-        if(!counter){
-            printf("timeout... No erors on remove\n");
-        }
-        tries++;
-    } while(counter < 1 && tries < TRIES);
+    addFd(&fd_sockets, &max, fd);        
 
-    if(FD_ISSET(fd, &fd_sockets)){
-    	// Receives the response from the root server
-        receiveUdp(fd, bufferRootServer, BUFFER_SIZE);
-        sscanf(bufferRootServer, "%s\n", action);
-        printf("a action é: %s \n", action);
-   
-        if(!strcmp(action, "ERROR")) {
-            printf("a mensagem de erro é %s\n", bufferRootServer);
+    // Puts server in receive state with timeout option
+    counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
+        
+    if(counter < 0){
+        perror("Error in select"); 
+        close(fd);
+        exit(0);
         }
-        else {
-            printf("Error on the content of whoIsRoot, received %s\n", bufferRootServer);
-            exit(0);
+    // if counter = 0, any response was received
+    if(!counter){
+        printf("timeout... No erors on remove\n");
+    }
+    else{
+        if(FD_ISSET(fd, &fd_sockets)){
+            struct sockaddr_in addr;
+
+            // Receives the response from the root server
+            receiveUdp(fd, bufferRootServer, BUFFER_SIZE, &addr);
+            sscanf(bufferRootServer, "%s\n", action);
+            printf("a action é: %s \n", action);
+       
+            if(!strcmp(action, "ERROR")) {
+                printf("a mensagem de erro é %s\n", bufferRootServer);
+            }
+            else {
+                printf("Error on the content of whoIsRoot, received %s\n", bufferRootServer);
+                freeaddrinfo(res);
+                close(fd);
+                exit(0);
+            }
         }
     }
-
     freeaddrinfo(res);
 
     close(fd);
@@ -224,6 +320,7 @@ int DUMP() {
 	int fd = -1;
 
 	// Buffers to hold messages
+    char bufferReceive[BUFFER_SIZE];
 	char buffer[BUFFER_SIZE];
 	char streams[BUFFER_SIZE];
 
@@ -235,7 +332,7 @@ int DUMP() {
 
     t1 = NULL;
 	t2.tv_usec = 0;
-	t2.tv_sec = TIMEOUT_REMOVE;
+	t2.tv_sec = TIMEOUT;
 	t1 = &t2;
 
 	// Creates an UDP socket for communication with root server
@@ -244,44 +341,63 @@ int DUMP() {
 	// Sends the DUMP signal to the root server
     sendUdp(fd, "DUMP\n", strlen("DUMP\n"), res);
 
-    int count = 0;
-
-    while(1) {
-	    // Indicate to select to watch UDP socket
+    // Tries 3 times to get the information from root server
+    int tries = 0;
+    int counter = 0;
+    do {
+        // Indicate to select to watch UDP socket
 	    FD_ZERO(&fd_sockets);
 	    int max = fd;
 	    addFd(&fd_sockets, &max, fd);
 	    
-	    // Tries 3 times to get the information from root server
-	    int tries = 0;
-	    int counter = 0;
-	    do {
-	        // Puts server in receive state with timeout option
-	        counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
-	            
-	        if(counter < 0){
-	            perror("Error in select"); 
-	            close(fd);
-	            exit(0);
-	            }
-	        // if counter = 0, any response was received
-	        if(!counter){
-	            printf("timeout dump...\n");
-	        }
-	        tries++;
-	    } while(counter < 1 && tries < TRIES);
+    
+        // Puts server in receive state with timeout option
+        counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
+            
+        if(counter < 0){
+            perror("Error in select"); 
+            close(fd);
+            exit(0);
+            }
+        // if counter = 0, any response was received
+        if(!counter){
+            printf("timeout dump...\n");
+        }
+        tries++;
+    } while(counter < 1 && tries < TRIES);
 
-	    if(FD_ISSET(fd, &fd_sockets)){
-	    	int n = receiveUdp(fd, buffer, BUFFER_SIZE);
+    if(tries >= TRIES) {
+        // FUNCTION TO TURN OFF EVERYTHING
+        perror("Error DUMP"); 
+        freeaddrinfo(res);
+        close(fd);
+        return 0;
+    }
+
+    int count = 0;
+
+    if(FD_ISSET(fd, &fd_sockets)) {
+        printf("Receiving DUMP\n");
+	    while(1){
+            struct sockaddr_in addr;
+
+	    	int n = receiveUdp(fd, buffer, BUFFER_SIZE, &addr);
 
 	    	if(count == 0) {
-				sscanf(buffer, "%[^\n ] %[^ ]", streams, buffer);
-        
+				sscanf(buffer, "%[^\n]\n%s", streams, bufferReceive);
+                printf("buffer: %s\n", buffer);
+                printf("streams: %s\n", streams);
+                printf("bufferReceive: %s\n", bufferReceive);
+                if(bufferReceive[n-1] == '\n' && bufferReceive[n-2] == '\n')
+                    break;
 	    	}
-	        printf("%s", buffer);
-	        if(buffer[n-1] == '\n' && buffer[n-2] == '\n')
-	            break;
-	        buffer[0] = '\0';   
+            else {
+    	        printf("%s", buffer);
+    	        if(buffer[n-1] == '\n' && buffer[n-2] == '\n')
+    	            break;
+            }
+	        memset(buffer, '\0', BUFFER_SIZE);
+            buffer[0] = '\0';   
 	        count++;
 	    }
 

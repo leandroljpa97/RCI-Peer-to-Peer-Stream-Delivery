@@ -6,7 +6,7 @@
 
 #include "utils.h"
 
-#define IP_SIZE 16
+
 
 // Defualt init variables
 char streamId[64];
@@ -36,13 +36,35 @@ void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd) {
  */
 void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd) {
     FD_SET(_fd, _fd_sockets);
-    *_maxfd = _fd;
+    if(*_maxfd < _fd)
+        *_maxfd = _fd;
 }
         
 
 int checkPort(int _port){
     if(_port>1024 && _port <65535)
         return 1;
+    return 0;
+}
+
+int insertFdClient(int _newfd, clients_t *_clients) {
+    for(int i = 0; i < tcpsessions; i++){
+        if(_clients->fd[i] == 0){
+            _clients->fd[i] = _newfd;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int deleteFdClient(int _delfd, clients_t *_clients) {
+    for(int i = 0; i < tcpsessions; i++){
+        if(_clients->fd[i] == _delfd){
+            _clients->fd[i] = 0;
+            _clients->available++;
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -153,7 +175,6 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
             exit(0);
         }
         else {
-            
             if(sscanf(argv[i], "%s", streamId) != 1) {
                 printf("error in streamId \n");
                 exit(1);
@@ -173,8 +194,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
             }
 
             flag_streamId = 1;
-
-            }
+        }
     }
 
     if(flag_streamId)
@@ -185,5 +205,11 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
 
 }
 
+void setTimeOut(struct timeval*_t1, struct timeval *_t2) {
+    _t1 = NULL;
+    _t2->tv_usec = 0;
+    _t2->tv_sec = TIMEOUT;
+    _t1 = _t2;
+}
 
 

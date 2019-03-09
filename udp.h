@@ -11,6 +11,8 @@ int initUDPserver();
 
 int sendUdp(int _fd, char data[], int size, struct addrinfo *_res);
 
-int receiveUdp(int _fd, char buffer[], int size);
+int answerUdp(int _fd, char data[], int size, struct  sockaddr * _addr);
+
+int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr);
 
 #endif

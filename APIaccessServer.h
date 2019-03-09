@@ -3,8 +3,10 @@
 
 #include "utils.h"
 
-int POPREQ(clients_t clients);
+int POPREQ(int _fd, struct addrinfo *res);
 
-int POPRESP(int _fdUP);
+int POPRESP(int _fd, struct sockaddr_in *_addr, char _ipaddr[], char _uport[]);
+
+
 
 #endif

@@ -28,75 +28,60 @@ COMMENTS
 #define PACKAGE_UDP 128
 #define PACKAGE_TCP 128
 
-
-#define DEFAULT_STREAM_PORT "00000"
-#define DEFAULT_TPORT "59000"
-#define DEFAULT_UPORT "59000"
-#define DEFAULT_RSADDR "193.136.138.142"
-#define DEFAULT_RSPORT "59000"
-#define DEFAULT_TCP_SESSIONS 1
-#define DEFAULT_BEST_POPS 1
-#define DEFAULT_TSECS 5
-#define DEFAULT_DATA_STREAM 1
-#define DEFAULT_DEBUG 0
-
-
-
 void interpRootServerMsg(char _data[]) {
     char content[50];
     int flag = sscanf(_data, "%s", content);
-            printf(" a mensagem vinda do stdi  é: %s \n",content);
-            if (flag<0){
-                printf("Error reading stdin. Exit(0) the program\n");
-                
-            }
-            else{
-                if(!strcmp(content,"streams")) {
-                    DUMP();
-                }
-                else if(!strcmp(content,"state")){
-                    printf("presses state \n");
+    printf(" a mensagem vinda do stdi  é: %s \n",content);
+    if (flag < 0){
+        printf("Error reading stdin. Exit(0) the program\n");   
+    }
+    else{
+        if(!strcmp(content,"streams")) {
+            DUMP();
+        }
+        else if(!strcmp(content,"state")){
+            printf("presses state \n");
 
-                }
-                else if(!strcmp(content,"display on")){
-                    printf("pressed display on \n");
+        }
+        else if(!strcmp(content,"display on")){
+            printf("pressed display on \n");
 
-                }
-                else if(!strcmp(content,"display off")){
-                    printf("pressed display off \n");
+        }
+        else if(!strcmp(content,"display off")){
+            printf("pressed display off \n");
 
-                }
-                else if(!strcmp(content,"format ascii")){
-                    printf("pressed ascii \n");
-                }
-                else if(!strcmp(content,"format hex")){
-                    printf("pressed display on \n");
+        }
+        else if(!strcmp(content,"format ascii")){
+            printf("pressed ascii \n");
+        }
+        else if(!strcmp(content,"format hex")){
+            printf("pressed display on \n");
 
-                }
-                else if(!strcmp(content,"debug on")){
-                    printf("pressed debug on \n");
+        }
+        else if(!strcmp(content,"debug on")){
+            printf("pressed debug on \n");
 
-                }
-                else if(!strcmp(content,"debug off")){
-                    printf("pressed debug off \n");
+        }
+        else if(!strcmp(content,"debug off")){
+            printf("pressed debug off \n");
 
-                }
-                else if(!strcmp(content,"tree")){
-                    printf("pressed tree \n");
+        }
+        else if(!strcmp(content,"tree")){
+            printf("pressed tree \n");
 
-                }
-                else if(!strcmp(content,"exit")){
-                    printf("pressed exit \n");
-                    REMOVE();
-                }
-                else 
-                    printf("wrong command, try again \n");
-            }
+        }
+        else if(!strcmp(content,"exit")){
+            printf("pressed exit \n");
+            REMOVE();
+        }
+        else 
+            printf("wrong command, try again \n");
+    }
 
 }
 
-int main(int argc, char const *argv[])
-{
+
+int main(int argc, char const *argv[]) {
 	int root = 0;
 
     uint16_t _queryID = 0;
@@ -106,6 +91,7 @@ int main(int argc, char const *argv[])
 	clients_t clients;
 	int fdAccessServer = -1;
 	int fdUp = -1;
+    int fdDown = -1;
 
 	// Biggest Value of file descriptor pointer
     int maxfd = 0;
@@ -125,10 +111,9 @@ int main(int argc, char const *argv[])
                        				uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs, 
                       				&dataStream, &debug);
 
-    clients.bestpops = tcpsessions;
-    clients.available = 0;
+    // Init clients struct
+    clients.available = tcpsessions;
     clients.fd = (int *) calloc(tcpsessions, sizeof(int));
-    clients.mask = (int *) calloc(tcpsessions, sizeof(int));
 
     // Print all available streams
     if(dumpSignal == 1) {
@@ -140,6 +125,9 @@ int main(int argc, char const *argv[])
     WHOISROOT(&root, &fdAccessServer, &fdUp);
 
     printf("fiz who is root\n");
+
+    // Create TCP Server
+    fdDown = createTcpServer();
 
     while(1) {
     	// Inits the mask of file descriptor
@@ -153,11 +141,12 @@ int main(int argc, char const *argv[])
         if(fdUp != -1)
             addFd(&fd_sockets, &maxfd, fdUp);
 
+        // Adds the file descriptor of the TCP to comm with clients
+        if(fdDown != -1)
+            addFd(&fd_sockets, &maxfd, fdDown);
+
         // Time variables
-		t1 = NULL;
-		t2.tv_usec = 0;
-		t2.tv_sec = TIMEOUT;
-		t1 = &t2;
+        setTimeOut(t1, &t2);
 
         // Monitor all the file descritors to check for new inputs
         counter = select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
@@ -165,7 +154,7 @@ int main(int argc, char const *argv[])
         if(counter < 0){
             perror("Error in select");
             
-            for (int i = 0; i < bestpops; ++i)
+            for (int i = 0; i < tcpsessions; ++i)
             	close(clients.fd[i]);
             
             close(fdUp);
@@ -193,7 +182,7 @@ int main(int argc, char const *argv[])
                     interpRootServerMsg(userInput);    
             } 
             // When receives messages from the access server
-            else if(FD_ISSET(fdAccessServer, &fd_sockets)) {
+            else if(fdAccessServer != -1 && FD_ISSET(fdAccessServer, &fd_sockets)) {
                 printf("Received something on the access server\n");
 
                 char buffer[BUFFER_SIZE];
@@ -202,41 +191,93 @@ int main(int argc, char const *argv[])
                 char availableIAmRootIP[BUFFER_SIZE];
                 char availableIAmRootPort[BUFFER_SIZE];
 
-                receiveUdp(fdAccessServer, bufferAccessServer, BUFFER_SIZE);
+                struct sockaddr_in addr;
+
+                receiveUdp(fdAccessServer, bufferAccessServer, BUFFER_SIZE, &addr);
 
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
-
-                        int status = POPREQ(clients);
+                    // If root has available connection, allow connection to itself
+                    if(clients.available > 0) {
+                        POPRESP(fdAccessServer, &addr, ipaddr, uport);
+                    }
+                    else {
+                        // Implementar procura na arvore
+                    }
                 }
-                else if(strstr(bufferAccessServer, "POPRESP") != NULL) {
-                    if(sscanf(bufferAccessServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 
-                       		  actionAccessServer, buffer, availableIAmRootIP , availableIAmRootPort) == 0)
-                        printf("Error on message from access server\n");
-                } 
             }
             // When receives a message from up on the tree
-            else if(FD_ISSET(fdUp, &fd_sockets)){
+            else if(fdUp != -1 && FD_ISSET(fdUp, &fd_sockets)) {
                 printf("i received something from TCP \n");
 
                 char bufferUp[PACKAGETCP];
+
+                // Clean the buffers
+                memset(bufferUp,0, sizeof(bufferUp));
+                bufferUp[0] = '\0';
 
                 readTcp(fdUp, bufferUp, PACKAGETCP);
 
                 printf("o buffer tcp é: %s \n", bufferUp);
                 if(root){
                     printf("i received stream and from sourceServer\n");
+                    // Analise client list and send message
+                    for (int i = 0; i < tcpsessions; ++i)                 {
+                        if(clients.fd[i] != 0) {
+                            // retransmit message to client.fd[i]
+                           /* strcpy(bufferStream, "DATA ");
+                            DecToHexStr(strlen(bufferUp)-1, strHexa);
+                            strcat(bufferStream,strHexa);
+                            strHexa[0] = '\0';
+                            strcat(bufferStream,"\n");
+                            strcat(bufferStream,bufferUp);
+                            sendStreamToChilds(bufferStream,fdClients, tcpsessions);
+                            printf("i received stream and from sourceServer\n");*/
+                        }
+                    }
                 }
                 else if(!root){
                     printf("i received from my dad \n");
+                    /*n = sscanf(bufferUp,"%[^ ] %[^\n]\n %s",actionData,strHexa,contentStream);
+                    if(n == 3 && !strcmp(actionData,"DATA")){
+                            printf("%s \n",contentStream);
+                            sendStreamToChilds(bufferStream,fdClients, tcpsessions);
+
+                        }*/
+                }                
+            }
+            // When receives a new client, performs accept
+            else if(fdDown != -1 && FD_ISSET(fdDown,&fd_sockets)){
+                printf("received newClient \n");
+
+                // Variables to accept new clients
+                int newfd = -1;
+                struct sockaddr addr_tcpServer;
+                unsigned int addrlenTcpServer = sizeof(struct sockaddr);
+
+                if((newfd = accept(fdDown, (struct sockaddr *) &addr_tcpServer, &addrlenTcpServer)) == -1) {
+                    printf("Error while accepting new client\n");
+                    exit(1);
+                }
+                if(clients.available > 0){
+                    if(insertFdClient(newfd, &clients)) {
+                        // Sends the welcome message to the new client
+                        if(!WELCOME(newfd)) {
+                            deleteFdClient(newfd, &clients);
+                        }
+                        clients.available--;
+                    }
+                    else{
+                        writeTcp(fdUp,"RE",strlen("RE"));
+
+                    }
+                }
+                else {
+                    writeTcp(fdUp,"RE",strlen("RE"));
                 }
 
-                // Analise client list and send message
-                for (int i = 0; i < bestpops; ++i)                 {
-                	if(clients.mask[i] != 0) {
-                		// retransmit message to client.fd[i]
-                	}
-                }
+
             } 
+ 
         }
 
     }

@@ -5,11 +5,14 @@
 #include <stdint.h>
 
 #define TRIES 3
-#define TIMEOUT 2
-#define TIMEOUT_REMOVE 1
+#define TIMEOUT 4
+#define TIMEOUT_REMOVE 2
 
 #define BUFFER_SIZE 256
 #define PACKAGETCP 256
+
+#define IP_SIZE 16
+#define PORT_SIZE 6
 
 #define DEFAULT_STREAM_PORT "00000"
 #define DEFAULT_TPORT "59000"
@@ -39,15 +42,17 @@ extern int debug;
 
 typedef struct _clients {
 	int *fd;
-	int *mask;
 	int available;
-	int bestpops;
 } clients_t;
 
 
 void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd);
 
 void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd);
+
+int insertFdClient(int _newfd, clients_t *_clients);
+
+int deleteFdClient(int _delfd, clients_t *_clients);
 
 int checkPort(int _port);
 
@@ -57,7 +62,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
 						int * tcpsessions, int * bestpops, int * tsecs, 
 						int *dataStream, int *debug);
 
-
+void setTimeOut(struct timeval*_t1, struct timeval *_t2);
 
 
 #endif

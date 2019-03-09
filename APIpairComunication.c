@@ -10,11 +10,30 @@
 
 #define HEX_STYLE "0000"
 
+int WELCOME(int _fd) {
+    char buffer[BUFFER_SIZE];
+
+    strcpy(buffer,"WE ");
+    strcat(buffer,streamId);
+    strcat(buffer,"\n");
+
+    // finds the size of the WHOISROOT message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+        return 0;
+
+    printf("recebi um novo cliente  \n");
+
+    return 1;
+}
+
 /* DISCORVERY OF THE ACCESS POINT */
 
 int POP_QUERY(int _fd, uint16_t *_queryID) {
 	char buffer[PACKAGETCP];
-	char bestpopsString[] = "00";
+	char tcpsessionsString[] = "00";
 
 	// Converts queryID to hex format
 	char queryIDHex[] = "HEX_STYLE";
@@ -25,8 +44,8 @@ int POP_QUERY(int _fd, uint16_t *_queryID) {
     strcpy(buffer, "PQ ");
     strcat(buffer, queryIDHex);
     strcat(buffer, " ");
-    sprintf(bestpopsString, "%d", bestpops);
-    strcat(buffer, bestpopsString);
+    sprintf(tcpsessionsString, "%d", tcpsessions);
+    strcat(buffer, tcpsessionsString);
     strcat(buffer, "\n");
     printf("o buffer no whoIsRoot é %s\n", buffer);
 
