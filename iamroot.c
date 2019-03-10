@@ -82,13 +82,16 @@ void interpRootServerMsg(char _data[]) {
 
 
 int main(int argc, char const *argv[]) {
+
+    initializations();
+    // Indicates if the iamroot app is a root of the stream
 	int root = 0;
 
+    // Indicatse the number of the Query in 16 bits
     uint16_t _queryID = 0;
 	
 	// Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
-	clients_t clients;
 	int fdAccessServer = -1;
 	int fdUp = -1;
     int fdDown = -1;
@@ -112,8 +115,7 @@ int main(int argc, char const *argv[]) {
                       				&dataStream, &debug);
 
     // Init clients struct
-    clients.available = tcpsessions;
-    clients.fd = (int *) calloc(tcpsessions, sizeof(int));
+    initClientStructure();
 
     // Print all available streams
     if(dumpSignal == 1) {
@@ -198,6 +200,7 @@ int main(int argc, char const *argv[]) {
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
                     // If root has available connection, allow connection to itself
                     if(clients.available > 0) {
+                        // Sends POPRESP with IP and Port to connect to itself
                         POPRESP(fdAccessServer, &addr, ipaddr, uport);
                     }
                     else {
@@ -242,7 +245,7 @@ int main(int argc, char const *argv[]) {
                             printf("%s \n",contentStream);
                             sendStreamToChilds(bufferStream,fdClients, tcpsessions);
 
-                        }*/
+                    }*/
                 }                
             }
             // When receives a new client, performs accept

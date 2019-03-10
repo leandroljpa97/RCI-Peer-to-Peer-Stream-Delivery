@@ -320,9 +320,8 @@ int DUMP() {
 	int fd = -1;
 
 	// Buffers to hold messages
-    char bufferReceive[BUFFER_SIZE];
 	char buffer[BUFFER_SIZE];
-	char streams[BUFFER_SIZE];
+	char *streams;
 
     // Mask for the select
     fd_set fd_sockets;  
@@ -374,35 +373,16 @@ int DUMP() {
         return 0;
     }
 
-    int count = 0;
-
     if(FD_ISSET(fd, &fd_sockets)) {
-        printf("Receiving DUMP\n");
-	    while(1){
-            struct sockaddr_in addr;
+        struct sockaddr_in addr;
 
-	    	int n = receiveUdp(fd, buffer, BUFFER_SIZE, &addr);
+    	receiveUdp(fd, buffer, BUFFER_SIZE, &addr);
 
-	    	if(count == 0) {
-				sscanf(buffer, "%[^\n]\n%s", streams, bufferReceive);
-                printf("buffer: %s\n", buffer);
-                printf("streams: %s\n", streams);
-                printf("bufferReceive: %s\n", bufferReceive);
-                if(bufferReceive[n-1] == '\n' && bufferReceive[n-2] == '\n')
-                    break;
-	    	}
-            else {
-    	        printf("%s", buffer);
-    	        if(buffer[n-1] == '\n' && buffer[n-2] == '\n')
-    	            break;
-            }
-	        memset(buffer, '\0', BUFFER_SIZE);
-            buffer[0] = '\0';   
-	        count++;
-	    }
-
+        // Advance the "STREAMS"
+        streams = &buffer[8];
+        printf("%s", streams);    	
 	}
-	printf("\n");
+
     freeaddrinfo(res);
 
     close(fd);

@@ -120,6 +120,7 @@ int createTcpServer() {
 int readTcp(int fd, char* buffer, int size) {
     char aux[128];  
     int n = read(fd,aux,sizeof(aux));
+
     if(n==-1){
         printf("error reading in TCP \n");
         exit(1);
@@ -141,8 +142,7 @@ int writeTcp(int _fd, char *data, int size)
     nytes = size; 
     nLeft = nytes;
 
-    while(nLeft > 0)
-    {
+    while(nLeft > 0) {
         nSended = write(_fd, data, nLeft);
         if(nSended <= 0){
             printf("error sending message \n");

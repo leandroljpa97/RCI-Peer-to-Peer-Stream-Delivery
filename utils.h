@@ -25,6 +25,13 @@
 #define DEFAULT_DATA_STREAM 1
 #define DEFAULT_DEBUG 0
 
+typedef struct _clients {
+	int *fd;
+	int available;
+	char **ip;
+	char **port;
+} clients_t;
+
 extern char streamId[];
 extern char streamIp[];
 extern char streamName[];
@@ -40,11 +47,21 @@ extern int tsecs;
 extern int dataStream;
 extern int debug;
 
-typedef struct _clients {
-	int *fd;
-	int available;
-} clients_t;
+// Structure with clients information
+extern clients_t clients;
 
+
+void ctrl_c_callback_handler(int signum);
+
+void error_confirmation(char*s);
+
+void initClientStructure();
+
+void closeAllClients();
+
+void clearClientStructure();
+
+void initializations();
 
 void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd);
 

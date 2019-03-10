@@ -10,9 +10,12 @@
 
 #define HEX_STYLE "0000"
 
+/* ENTERING STREAM TREE */
+
 int WELCOME(int _fd) {
     char buffer[BUFFER_SIZE];
 
+    // Creates WELCOME message
     strcpy(buffer,"WE ");
     strcat(buffer,streamId);
     strcat(buffer,"\n");
@@ -28,6 +31,100 @@ int WELCOME(int _fd) {
 
     return 1;
 }
+
+int NEW_POP(int _fd) {
+    char buffer[BUFFER_SIZE];
+
+    // Creates NEW_POP message
+    strcpy(buffer, "NP ");
+    strcat(buffer, ipaddr);
+    strcpy(buffer,":");
+    strcpy(buffer, tport);
+    strcat(buffer,"\n");
+
+    // finds the size of the NEW_POP message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+        return 0;
+
+    printf("sent a NEW_POP\n");
+
+    return 1;
+}
+
+int REDIRECT(int _fd, char _ipaddr[], char _tport[]) {
+    char buffer[BUFFER_SIZE];
+
+    // Creates REDIRECT message
+    strcpy(buffer, "RD ");
+    strcat(buffer, _ipaddr);
+    strcpy(buffer,":");
+    strcpy(buffer, _tport);
+    strcat(buffer,"\n");
+
+    // finds the size of the NEW_POP message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+        return 0;
+
+    printf("sent a REDIRECT\n");
+
+    return 1;
+}
+
+/* STOP and RESTABLESHIMENT of STREAMING */
+
+int STREAM_FLOWING(int _fd) {
+    char buffer[BUFFER_SIZE];
+
+    // Creates STREAM_FLOWING message
+    strcpy(buffer, "SF");
+    strcat(buffer,"\n");
+
+    // finds the size of the NEW_POP message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+        return 0;
+
+    printf("sent a REDIRECT\n");
+
+    return 1;
+}
+
+int DATA(int _fd, int nbytes, char _data[]) {
+    char buffer[BUFFER_SIZE];
+    char nbytesHex[BUFFER_SIZE];
+
+    // Converts queryID to hex format
+    sprintf(nbytesHex, "%x", nbytes);
+    printf("%d in Hexadecimal= %s", nbytes, nbytesHex);
+
+    // Creates STREAM_FLOWING message
+    strcpy(buffer, "DA ");
+    strcpy(buffer, nbytesHex);
+    strcat(buffer,"\n");
+
+    // finds the size of the NEW_POP message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+        return 0;
+
+    if(writeTcp(_fd, _data, nbytes) != nbytes) 
+        return 0;
+
+    printf("sent DATA\n");
+
+    return 1;
+}
+
 
 /* DISCORVERY OF THE ACCESS POINT */
 
@@ -93,6 +190,58 @@ int POP_REPLY(int _fd, uint16_t *_queryID, int avails) {
     	printf("Fail sending POP_REPLY\n");
     	return 0;
 	}
+
+    return 1;
+}
+
+/* TREE STRUCTURE MONITORING */
+
+int TREE_QUERY(int _fd, char _ipaddr[], char _tport[]) {
+    char buffer[PACKAGETCP];
+
+    // Creates TREE_QUERY message
+    strcpy(buffer, "TQ ");
+    strcat(buffer, _ipaddr);
+    strcat(buffer, ":");
+    strcat(buffer, _tport);
+    strcat(buffer, "\n");
+    printf("o buffer no TREE_QUERY é %s\n", buffer);
+
+    // finds the size of the POP_REPLY message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+        printf("Fail sending POP_REPLY\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+int TREE_REPLY(int _fd) {
+    char buffer[PACKAGETCP];
+    char tcpsessionsString[] = "00";
+
+    // Creates TREE_REPLY message
+    strcpy(buffer, "TR ");
+    strcat(buffer, ipaddr);
+    strcat(buffer, ":");
+    strcat(buffer, tport);
+    strcat(buffer, " ");
+    sprintf(tcpsessionsString, "%d", tcpsessions);
+    strcat(buffer, tcpsessionsString);
+    strcat(buffer, "\n");
+    printf("o buffer no TREE_QUERY é %s\n", buffer);
+
+    // finds the size of the POP_REPLY message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+        printf("Fail sending POP_REPLY\n");
+        return 0;
+    }
 
     return 1;
 }
