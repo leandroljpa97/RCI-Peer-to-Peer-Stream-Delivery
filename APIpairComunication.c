@@ -98,26 +98,24 @@ int STREAM_FLOWING(int _fd) {
 }
 
 int DATA(int _fd, int nbytes, char _data[]) {
-    char buffer[BUFFER_SIZE];
-    char nbytesHex[BUFFER_SIZE];
+    char buffer[PACKAGETCP];
+    char nbytesHex[] = "0000";
 
-    // Converts queryID to hex format
-    sprintf(nbytesHex, "%x", nbytes);
-    printf("%d in Hexadecimal= %s", nbytes, nbytesHex);
+    convertNumDoHex(nbytesHex, nbytes);
+
+    printf("%d in Hexadecimal = %s", nbytes, nbytesHex);
 
     // Creates STREAM_FLOWING message
     strcpy(buffer, "DA ");
-    strcpy(buffer, nbytesHex);
+    strcat(buffer, nbytesHex);
     strcat(buffer,"\n");
+    strcat(buffer, _data);
 
     // finds the size of the NEW_POP message
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
     if(writeTcp(_fd, buffer, i + 1) != i + 1) 
-        return 0;
-
-    if(writeTcp(_fd, _data, nbytes) != nbytes) 
         return 0;
 
     printf("sent DATA\n");
@@ -128,14 +126,14 @@ int DATA(int _fd, int nbytes, char _data[]) {
 
 /* DISCORVERY OF THE ACCESS POINT */
 
-int POP_QUERY(int _fd, uint16_t *_queryID) {
+int POP_QUERY(int _fd, uint16_t _queryID) {
 	char buffer[PACKAGETCP];
 	char tcpsessionsString[] = "00";
+	char queryIDHex[] = "0000";
 
-	// Converts queryID to hex format
-	char queryIDHex[] = "HEX_STYLE";
-	sprintf(queryIDHex, "%hu", (unsigned int) *_queryID);
-	printf("%d in Hexadecimal= %s", *_queryID, queryIDHex);
+    // Converts queryID to hex format
+    convertNumDoHex(queryIDHex, _queryID);
+	printf("%d in Hexadecimal = %s", _queryID, queryIDHex);
 
 	// Creates POP_QUERY message
     strcpy(buffer, "PQ ");
@@ -155,19 +153,17 @@ int POP_QUERY(int _fd, uint16_t *_queryID) {
     	return 0;
 	}
 
-    *_queryID++;
-
     return 1;
 }
 
-int POP_REPLY(int _fd, uint16_t *_queryID, int avails) {
+int POP_REPLY(int _fd, uint16_t _queryID, int avails) {
 	char buffer[PACKAGETCP];
 	char availsString[] = "00";
 
 	// Converts queryID to hex format
 	char queryIDHex[] = "HEX_STYLE";
-	sprintf(queryIDHex, "%hu",  (unsigned int) *_queryID);
-	printf("%d in Hexadecimal= %s", *_queryID, queryIDHex);
+	sprintf(queryIDHex, "%hu",  (unsigned int) _queryID);
+	printf("%d in Hexadecimal= %s", _queryID, queryIDHex);
 
 	// Creates POP_REPLY message
     strcpy(buffer, "PR ");

@@ -12,6 +12,7 @@
 
 #include "APIrootServer.h"
 #include "APIaccessServer.h"
+#include "APIpairComunication.h"
 #include "utils.h"
 #include "udp.h"
 #include "tcp.h"
@@ -24,7 +25,8 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
     struct timeval t2;
     char buffer[BUFFER_SIZE], buffer_aux[BUFFER_SIZE], action[BUFFER_SIZE];
 
-    setTimeOut(t1, &t2);
+    printf("o ip da root é %s \n", _accessServerIP);
+    printf("o porto da root é %s \n", _accessServerPort);
 
     // Initiates UPD socket for communication with the accessServer
     struct addrinfo *res = createUPDsocket(&fd, _accessServerIP, _accessServerPort);
@@ -33,13 +35,21 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
     int tries = 0;
     int counter = 0;
     int max = fd;
+    printf("PERFORM POPREQ\n");
     do {
         POPREQ(fd, res);
+        printf("SENT POPREQ\n");
 
         // Indicate to select to watch UDP socket
         FD_ZERO(&fd_sockets);
         max = fd;
         addFd(&fd_sockets, &max, fd);
+
+        // Time variables
+        t1 = NULL;
+        t2.tv_usec = 0;
+        t2.tv_sec = TIMEOUT;
+        t1 = &t2;
     
         // Puts server in receive state with timeout option
         counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);     
@@ -54,6 +64,7 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
             printf("timeout...\n");
         }
         tries++;
+        printf("TRY POPREQ\n");
     } while(counter < 1 && tries < TRIES);
 
     if(tries >= TRIES) {
@@ -122,7 +133,11 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
     // Variables for select time out
     struct timeval* t1 = NULL, t2;
 
-    setTimeOut(t1, &t2);
+    // Time variables
+    t1 = NULL;
+    t2.tv_usec = 0;
+    t2.tv_sec = TIMEOUT;
+    t1 = &t2;
 
 	// Creates an UDP socket for communication with root server
 	struct addrinfo * res = createUPDsocket(&fd, rsaddr, rsport);
@@ -184,7 +199,9 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         receiveUdp(fd, bufferRootServer, BUFFER_SIZE, &addr);
         sscanf(bufferRootServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", action, stream, accessServerIP, accessServerPort);
         printf("a action é: %s \n", action);
-
+        printf("a streamID é: %s \n", stream);
+        printf("o ip da root é %s \n", accessServerIP);
+        printf("o porto da root é %s \n", accessServerPort);
         // If the tree is empty, the program is the root stream. Change the state to root and goes to connect to a stream
         if(!strcmp(action, "URROOT")){
             // Indicates that the program is the root of a tree
@@ -211,7 +228,9 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             if(findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == 0) {
                 WHOISROOT(root, fdAccessServer, fdUp);
             }
-
+            printf("DadFound\n");
+            printf("availableIAmRootIP %s\n", availableIAmRootIP);
+            printf("availableIAmRootPort %s\n", availableIAmRootPort);
             *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
         }
         else if(!strcmp(action, "ERROR")) {

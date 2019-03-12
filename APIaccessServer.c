@@ -31,7 +31,7 @@ int POPREQ(int _fd, struct addrinfo *res) {
 	return n;
 }
 
-int POPRESP(int _fd, struct sockaddr_in *_addr, char _ipaddr[], char _uport[]) {
+int POPRESP(int _fd, struct sockaddr_in *_addr, char _ipaddr[], char _tport[]) {
 	char buffer[BUFFER_SIZE];
 	// Creates WHOISROOT message
     strcpy(buffer, "POPRESP ");
@@ -39,7 +39,7 @@ int POPRESP(int _fd, struct sockaddr_in *_addr, char _ipaddr[], char _uport[]) {
     strcat(buffer, " ");
     strcat(buffer, _ipaddr);
     strcat(buffer, ":");
-    strcat(buffer, _uport);
+    strcat(buffer, _tport);
     strcat(buffer, "\n");
     printf("o buffer no POPRESP é %s\n", buffer);
 

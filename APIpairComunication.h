@@ -11,9 +11,13 @@ int REDIRECT(int _fd, char _ipaddr[], char _tport[]);
 
 /* STOP and RESTABLESHIMENT of STREAMING */
 
-/* DISCORVERY OF THE ACCESS POINT */
-int POP_QUERY(int _fd, uint16_t *_queryID);
+int STREAM_FLOWING(int _fd);
 
-int POP_REPLY(int _fd, uint16_t *_queryID, int avails);
+int DATA(int _fd, int nbytes, char _data[]);
+
+/* DISCORVERY OF THE ACCESS POINT */
+int POP_QUERY(int _fd, uint16_t _queryID);
+
+int POP_REPLY(int _fd, uint16_t _queryID, int avails);
 
 #endif

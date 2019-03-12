@@ -103,7 +103,7 @@ int main(int argc, char const *argv[]) {
     fd_set fd_sockets;  
 
     // Time variables for select timeout
-    struct timeval* t1 = NULL;
+    struct timeval * t1 = NULL;
     struct timeval t2;
 
     // Return state of the select
@@ -114,6 +114,8 @@ int main(int argc, char const *argv[]) {
                        				uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs, 
                       				&dataStream, &debug);
 
+    printf(" o streamId: %s \n",streamId);
+
     // Init clients struct
     initClientStructure();
 
@@ -123,10 +125,15 @@ int main(int argc, char const *argv[]) {
     	DUMP();
         exit(1);
     }
+    
+    printf("fdUp = %d\n", fdUp);
+    printf("fdAccessServer = %d\n", fdAccessServer);
 
     WHOISROOT(&root, &fdAccessServer, &fdUp);
 
     printf("fiz who is root\n");
+    printf("fdUp = %d\n", fdUp);
+    printf("fdAccessServer = %d\n", fdAccessServer);
 
     // Create TCP Server
     fdDown = createTcpServer();
@@ -135,24 +142,27 @@ int main(int argc, char const *argv[]) {
     	// Inits the mask of file descriptor
         initMaskStdinFd(&fd_sockets, &maxfd);
 
-        // Adds the file descriptor for the communication with the access server
-        if(fdAccessServer != -1)
-            addFd(&fd_sockets, &maxfd, fdAccessServer);
-
         // Adds the file descriptor of the TCP to comm with root
         if(fdUp != -1)
             addFd(&fd_sockets, &maxfd, fdUp);
+
+        // Adds the file descriptor for the communication with the access server
+        if(fdAccessServer != -1)
+            addFd(&fd_sockets, &maxfd, fdAccessServer);
 
         // Adds the file descriptor of the TCP to comm with clients
         if(fdDown != -1)
             addFd(&fd_sockets, &maxfd, fdDown);
 
         // Time variables
-        setTimeOut(t1, &t2);
+        t1 = NULL;
+        t2.tv_usec = 0;
+        t2.tv_sec = TIMEOUT;
+        t1 = &t2;
 
         // Monitor all the file descritors to check for new inputs
         counter = select(maxfd+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
-        
+      
         if(counter < 0){
             perror("Error in select");
             
@@ -164,14 +174,12 @@ int main(int argc, char const *argv[]) {
             exit(0);
         }
 
-        // Select got timeout, reset
         if(!counter){
-            printf("timeout!!\n");
+            // Select got timeout, reset
         }
         else {
         	// Checks if something was written on the standart input
             if(FD_ISSET(0, &fd_sockets)){
-                printf("receive something stdin\n");
                 char userInput[BUFFER_SIZE];
                 // Clean the buffers
 		    	memset(userInput,0,sizeof(userInput));
@@ -187,9 +195,7 @@ int main(int argc, char const *argv[]) {
             else if(fdAccessServer != -1 && FD_ISSET(fdAccessServer, &fd_sockets)) {
                 printf("Received something on the access server\n");
 
-                char buffer[BUFFER_SIZE];
                 char bufferAccessServer[BUFFER_SIZE];
-                char actionAccessServer[BUFFER_SIZE];
                 char availableIAmRootIP[BUFFER_SIZE];
                 char availableIAmRootPort[BUFFER_SIZE];
 
@@ -199,9 +205,10 @@ int main(int argc, char const *argv[]) {
 
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
                     // If root has available connection, allow connection to itself
+                    printf("RECEIVED A POPREQ\n");
                     if(clients.available > 0) {
                         // Sends POPRESP with IP and Port to connect to itself
-                        POPRESP(fdAccessServer, &addr, ipaddr, uport);
+                        POPRESP(fdAccessServer, &addr, ipaddr, tport);
                     }
                     else {
                         // Implementar procura na arvore
@@ -212,40 +219,48 @@ int main(int argc, char const *argv[]) {
             else if(fdUp != -1 && FD_ISSET(fdUp, &fd_sockets)) {
                 printf("i received something from TCP \n");
 
-                char bufferUp[PACKAGETCP];
-
-                // Clean the buffers
-                memset(bufferUp,0, sizeof(bufferUp));
-                bufferUp[0] = '\0';
-
-                readTcp(fdUp, bufferUp, PACKAGETCP);
-
-                printf("o buffer tcp é: %s \n", bufferUp);
                 if(root){
-                    printf("i received stream and from sourceServer\n");
+                    char bufferUp[PACKAGETCP];
+
+                    int n = readTcp(fdUp, bufferUp, PACKAGETCP);
+
+                    printf("o buffer tcp é: %s \n", bufferUp);
                     // Analise client list and send message
                     for (int i = 0; i < tcpsessions; ++i)                 {
                         if(clients.fd[i] != 0) {
-                            // retransmit message to client.fd[i]
-                           /* strcpy(bufferStream, "DATA ");
-                            DecToHexStr(strlen(bufferUp)-1, strHexa);
-                            strcat(bufferStream,strHexa);
-                            strHexa[0] = '\0';
-                            strcat(bufferStream,"\n");
-                            strcat(bufferStream,bufferUp);
-                            sendStreamToChilds(bufferStream,fdClients, tcpsessions);
-                            printf("i received stream and from sourceServer\n");*/
+                            DATA(clients.fd[i], n, bufferUp);
                         }
                     }
                 }
                 else if(!root){
                     printf("i received from my dad \n");
-                    /*n = sscanf(bufferUp,"%[^ ] %[^\n]\n %s",actionData,strHexa,contentStream);
-                    if(n == 3 && !strcmp(actionData,"DATA")){
-                            printf("%s \n",contentStream);
-                            sendStreamToChilds(bufferStream,fdClients, tcpsessions);
 
-                    }*/
+                    char bufferUp[TCP_MESSAGE_TYPE];
+                    char sizeBuffer[] = "0000";
+                    char bufferData[PACKAGETCP];
+
+                    if(readTcp(fdUp, bufferUp, TCP_MESSAGE_TYPE) != TCP_MESSAGE_TYPE) {
+                        printf("Error reading message from dad\n");
+                    }
+                    
+                    if(strcmp(bufferUp, "DA ") == 0) {
+                        if(readTcp(fdUp, sizeBuffer, TCP_MESSAGE_SIZE) != TCP_MESSAGE_SIZE) {
+                            printf("Error reading message from dad\n");
+                        }
+                        else if(readTcp(fdUp, bufferData, atoi(sizeBuffer)) != atoi(sizeBuffer)) {
+                            printf("Error reading message from dad\n");
+                        }
+                        else {
+                            printf("Receved stream %s\n", bufferData);
+
+                            // Retransmit data to its clients
+                            for (int i = 0; i < tcpsessions; ++i)                 {
+                                if(clients.fd[i] != 0) {
+                                    DATA(clients.fd[i], atoi(sizeBuffer), bufferUp);
+                                }
+                            }
+                        }
+                    }
                 }                
             }
             // When receives a new client, performs accept

@@ -9,7 +9,9 @@
 #define TIMEOUT_REMOVE 2
 
 #define BUFFER_SIZE 256
-#define PACKAGETCP 256
+#define PACKAGETCP 65536
+#define TCP_MESSAGE_TYPE 3
+#define TCP_MESSAGE_SIZE 5
 
 #define IP_SIZE 16
 #define PORT_SIZE 6
@@ -62,6 +64,8 @@ void closeAllClients();
 void clearClientStructure();
 
 void initializations();
+
+void convertNumDoHex(char *nbytesHex, int num);
 
 void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd);
 

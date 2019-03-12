@@ -80,12 +80,10 @@ int sendUdp(int _fd, char data[], int size, struct addrinfo *_res) {
 	return n;
 }
 
-int answerUdp(int _fd, char data[], int size, struct  sockaddr * _addr) {
-    socklen_t addrlen = sizeof(*_addr);
-    
-    int n = sendto(_fd, data, size, 0, _addr, addrlen);
+int answerUdp(int _fd, char data[], int size, struct  sockaddr * _addr) {    
+    int n = sendto(_fd, data, size, 0, _addr, sizeof(*_addr));
     if(n == -1){
-        printf("error sendingTo in answerUp");
+        printf("error sending To in answerUp");
         exit(1);
     }
 
@@ -95,7 +93,7 @@ int answerUdp(int _fd, char data[], int size, struct  sockaddr * _addr) {
 int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr) {
 	socklen_t addrlen = sizeof(*_addr);
 
-	int n = recvfrom(_fd, buffer, size, 0, (struct sockaddr *) &_addr, &addrlen);
+	int n = recvfrom(_fd, buffer, size, 0, (struct sockaddr *) _addr, &addrlen);
     if(n == -1) {
         printf("Error in receive from UDP \n");
         exit(1);

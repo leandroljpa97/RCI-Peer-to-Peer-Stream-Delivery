@@ -92,6 +92,27 @@ void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd) {
     _maxfd = 0;
 }
 
+void convertNumDoHex(char *nbytesHex, int num) {
+    int i = 0;
+
+    // Converts queryID to hex format
+    sprintf(nbytesHex, "%x", num);
+
+    char hex = nbytesHex[i];
+    while(hex != '\0') {
+        i++;
+        hex = nbytesHex[i];
+    }
+    i--;
+    for(int j = 3; j >= 0; j--) {
+        if(i < 0)
+            nbytesHex[j] = '0';
+        else
+            nbytesHex[j] = nbytesHex[i];
+        i--;
+    }
+}
+
 /*
  * addFd: add a new file descriptor to be controlled by select
  */
@@ -103,7 +124,7 @@ void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd) {
         
 
 int checkPort(int _port){
-    if(_port>1024 && _port <65535)
+    if(_port > 1024 && _port < 65535)
         return 1;
     return 0;
 }
@@ -197,7 +218,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Error decoding tcpsessions\n");
                 exit(1);
             }
-            if((*tcpsessions)<1) {
+            if((*tcpsessions) < 1) {
                 printf("tcpsessions has to be greater than 1 \n");
                 exit(1);
             }
@@ -210,7 +231,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 exit(1);
             }
             printf("bestpops %d\n", *bestpops);
-             if(*(bestpops)<1){
+             if(*(bestpops) < 1){
                 printf("bestpops has to be greater than 1 \n");
                 exit(1);
             }
