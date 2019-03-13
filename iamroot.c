@@ -150,9 +150,15 @@ int main(int argc, char const *argv[]) {
         if(fdAccessServer != -1)
             addFd(&fd_sockets, &maxfd, fdAccessServer);
 
-        // Adds the file descriptor of the TCP to comm with clients
+        // Adds the file descriptor of the TCP to accept new clients
         if(fdDown != -1)
             addFd(&fd_sockets, &maxfd, fdDown);
+        
+        // Adds the file descriptor of the TCP to comm with clients
+        for(int i =0; i < tcpsessions; i++)
+            if(clients.fd[i] != 0)
+                addFd(&fd_sockets, &maxfd, clients.fd[i]);
+
 
         // Time variables
         t1 = NULL;
@@ -222,7 +228,15 @@ int main(int argc, char const *argv[]) {
                 if(root){
                     char bufferUp[PACKAGETCP];
 
-                    int n = readTcp(fdUp, bufferUp, PACKAGETCP);
+                    int n = readTcpStream(fdUp, bufferUp, PACKAGETCP);
+
+                    // Stream is left
+                    if(n == -1) {
+                        printf("Stream is gone \n");
+                        close(fdUp);
+                        fdUp = -1;
+                    }
+
 
                     printf("o buffer tcp é: %s \n", bufferUp);
                     // Analise client list and send message
@@ -236,18 +250,28 @@ int main(int argc, char const *argv[]) {
                     printf("i received from my dad \n");
 
                     char bufferUp[TCP_MESSAGE_TYPE];
+
+                    int n;
                     
-                    if(readTcp(fdUp, bufferUp, TCP_MESSAGE_TYPE) != TCP_MESSAGE_TYPE) {
-                        printf("Error reading message from dad\n");
+                    if((n = readTcp(fdUp, bufferUp, TCP_MESSAGE_TYPE)) != TCP_MESSAGE_TYPE) {
+                        if(n == -1)  {
+                            printf("Dad left\n");
+                            // Chamar WHOISROOT
+                        }
+                        else
+                            printf("Error reading message from dad\n");
                     }
                     
                     if(strcmp(bufferUp, "DA ") == 0) {
                         char sizeBuffer[] = "0000";
                         char bufferData[PACKAGETCP];
+
+                        // Reads the size of the data package
                         if(readTcp(fdUp, sizeBuffer, TCP_MESSAGE_SIZE) != TCP_MESSAGE_SIZE) {
                             printf("Error reading message from dad\n");
                         }
-                        else if(readTcp(fdUp, bufferData, atoi(sizeBuffer)) != atoi(sizeBuffer)) {
+                        // Reads the data pckage
+                        else if(readTcpStream(fdUp, bufferData, (int ) strtol(sizeBuffer, NULL, 16)) != (int ) strtol(sizeBuffer, NULL, 16)) {
                             printf("Error reading message from dad\n");
                         }
                         else {
@@ -256,7 +280,7 @@ int main(int argc, char const *argv[]) {
                             // Retransmit data to its clients
                             for (int i = 0; i < tcpsessions; ++i)                 {
                                 if(clients.fd[i] != 0) {
-                                    DATA(clients.fd[i], atoi(sizeBuffer), bufferUp);
+                                    DATA(clients.fd[i], strtol(sizeBuffer, NULL, 16), bufferUp);
                                 }
                             }
                         }
@@ -264,7 +288,7 @@ int main(int argc, char const *argv[]) {
                     else if(strcmp(bufferUp, "WE ") == 0) {
                         char bufferUpStreamId[TCP_MESSAGE_STREAMID];
 
-                        if(readTcp(fdUp, sizeBuffer, TCP_MESSAGE_STREAMID) != TCP_MESSAGE_STREAMID) {
+                        if(readTcp(fdUp, bufferUpStreamId, TCP_MESSAGE_STREAMID) != TCP_MESSAGE_STREAMID) {
                             printf("Error reading message from dad\n");
                         }
                         else {
@@ -296,6 +320,7 @@ int main(int argc, char const *argv[]) {
                         if(!WELCOME(newfd)) {
                             deleteFdClient(newfd, &clients);
                         }
+                        printf("mandei um welcome \n");
                         clients.available--;
                     }
                     else{
@@ -306,9 +331,15 @@ int main(int argc, char const *argv[]) {
                 else {
                     writeTcp(fdUp,"RE",strlen("RE"));
                 }
-
-
             } 
+            else if(clients.available < tcpsessions){
+                for(int i =0; i < tcpsessions; i++){
+                    if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
+                        printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
+
+                    }
+                }
+            }
  
         }
 

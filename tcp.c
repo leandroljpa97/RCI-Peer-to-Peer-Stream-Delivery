@@ -117,40 +117,95 @@ int createTcpServer() {
     return fd;
 }
 
-int readTcp(int fd, char* buffer, int size) {
-    char aux[128];  
-    int n = read(fd,aux,sizeof(aux));
 
-    if(n==-1){
-        printf("error reading in TCP \n");
-        exit(1);
+int readTcpStream(int fd, char* buffer, int size) {
+    int nReceived;   
+    int nbytes;     
+    int nLeft;  
+    char aux[PACKAGETCP];    
+
+    nLeft = size;
+    nbytes = 0;
+
+    while(nLeft > 0) {
+        printf("ola\n");
+        nReceived = read(fd, aux, nLeft);
+        printf("nReceived = %d \n",nReceived);
+        // Received an EOF
+        if(nReceived == -1) {
+            printf("Dad left\n");
+            return -1;
+        }
+        // Nothing left to read
+        else if(nReceived == 0) {
+            return nbytes;
+        }
+
+        nLeft -= nReceived;
+        buffer += nReceived;
+        nbytes += nReceived;
+
+        aux[nReceived] = '\0';
+        printf("aux %s\n", aux);
+        strcat(buffer, aux);
+        printf("buffer %s\n", buffer);
     }
-    
 
-    aux[n]='\0';
-    strcat(buffer, aux);
-
-    return n;
+    return nbytes;
 }
 
-int writeTcp(int _fd, char *data, int size)
-{
+int readTcp(int fd, char* buffer, int size) {
+    int nReceived;   
+    int nbytes;     
+    int nLeft;  
+    char aux[PACKAGETCP];    
+
+    nLeft = size;
+    nbytes = 0;
+
+    while(1) {
+        nReceived = read(fd, aux, nLeft);
+        if(nReceived <= 0){
+            printf("error receiving message \n");
+            return 0;
+
+        }
+
+        nLeft -= nReceived;
+        buffer += nReceived;
+        nbytes += nReceived;
+
+        if(aux[nReceived-1] == '\n' )
+            break;
+
+        aux[nReceived] = '\0';
+        strcat(buffer, aux);
+    }
+
+    aux[nReceived] = '\0';
+    strcat(buffer, aux);
+
+    return nbytes;
+}
+
+int writeTcp(int _fd, char *data, int size) {
     int nSended;   
-    int nytes;     
+    int nbytes;     
     int nLeft;      
 
-    nytes = size; 
-    nLeft = nytes;
+    nbytes = size; 
+    nLeft = nbytes;
 
     while(nLeft > 0) {
         nSended = write(_fd, data, nLeft);
         if(nSended <= 0){
             printf("error sending message \n");
+            return 0;
         }
 
         nLeft -= nSended;
         data += nSended;
     }
 
-    return nytes;
+    return nbytes;
 }

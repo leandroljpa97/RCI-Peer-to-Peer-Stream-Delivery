@@ -12,6 +12,7 @@
 #define PACKAGETCP 65536
 #define TCP_MESSAGE_TYPE 3
 #define TCP_MESSAGE_SIZE 5
+#define TCP_MESSAGE_STREAMID 64
 
 #define IP_SIZE 16
 #define PORT_SIZE 6

@@ -12,6 +12,8 @@ int connectToTcp(char _availableIAmRootIP[], char _availableIAmRootPort[]);
 
 int createTcpServer();
 
+int readTcpStream(int fd, char* buffer, int size);
+
 int readTcp(int _fd, char* buffer, int size);
 
 int writeTcp(int _fd, char *data, int size);
