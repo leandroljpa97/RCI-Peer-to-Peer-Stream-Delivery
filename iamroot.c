@@ -236,14 +236,14 @@ int main(int argc, char const *argv[]) {
                     printf("i received from my dad \n");
 
                     char bufferUp[TCP_MESSAGE_TYPE];
-                    char sizeBuffer[] = "0000";
-                    char bufferData[PACKAGETCP];
-
+                    
                     if(readTcp(fdUp, bufferUp, TCP_MESSAGE_TYPE) != TCP_MESSAGE_TYPE) {
                         printf("Error reading message from dad\n");
                     }
                     
                     if(strcmp(bufferUp, "DA ") == 0) {
+                        char sizeBuffer[] = "0000";
+                        char bufferData[PACKAGETCP];
                         if(readTcp(fdUp, sizeBuffer, TCP_MESSAGE_SIZE) != TCP_MESSAGE_SIZE) {
                             printf("Error reading message from dad\n");
                         }
@@ -258,6 +258,20 @@ int main(int argc, char const *argv[]) {
                                 if(clients.fd[i] != 0) {
                                     DATA(clients.fd[i], atoi(sizeBuffer), bufferUp);
                                 }
+                            }
+                        }
+                    }
+                    else if(strcmp(bufferUp, "WE ") == 0) {
+                        char bufferUpStreamId[TCP_MESSAGE_STREAMID];
+
+                        if(readTcp(fdUp, sizeBuffer, TCP_MESSAGE_STREAMID) != TCP_MESSAGE_STREAMID) {
+                            printf("Error reading message from dad\n");
+                        }
+                        else {
+                            printf("Receved streamId %s", bufferUpStreamId);
+
+                            if(strcmp(bufferUpStreamId, streamId) == 0) {
+                                NEW_POP(fdUp);
                             }
                         }
                     }
