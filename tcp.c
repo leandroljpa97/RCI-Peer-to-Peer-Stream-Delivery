@@ -132,7 +132,6 @@ int readTcp(int fd, char* buffer) {
     aux[nReceived] = '\0';
     strcat(buffer, aux);
 
-
     return nReceived;
 }
 

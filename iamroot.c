@@ -237,16 +237,16 @@ int main(int argc, char const *argv[]) {
                 char sizeStreamOrId[BUFFER_SIZE];
 
                 if(root){
-
+                    // Reads the stream from the source up to the maximum allowed size
+                    // with n we determine how many bites were read, so we can prepare the buffer to send downstream
                     int n = readTcp(fdUp, bufferUp);
 
-                    // Stream is left
+                    // Stream is left - the program needs to restart and try to reconect with the source again
                     if(n == 0) {
                         printf("Stream is gone \n");
                         close(fdUp);
                         fdUp = -1;
                     }
-
 
                     printf("o buffer tcp é: %s \n", bufferUp);
                     // Analise client list and send message
@@ -262,22 +262,20 @@ int main(int argc, char const *argv[]) {
                     int n;
 
                     // if flag is 0 we have to do everything normal - read DA or WE 
-                    if(!checkReadUp){
+                    if(!checkReadUp) {
                         n = readTcp(fdUp, bufferAux);
                         if(n == -1)  {
-                                printf("Dad left\n");
-                                // Chamar WHOISROOT
-                          }
-
+                            printf("Dad left\n");
+                            // Chamar WHOISROOT
+                        }
                   
-                         n = sscanf(bufferUp,"%[^ ] %[^\n]\n%s",action, sizeStreamOrId, bufferUp);
+                        n = sscanf(bufferUp,"%[^ ] %[^\n]\n%s",action, sizeStreamOrId, bufferUp);
 
-                        if(strcmp(action, "DA ") == 0) {
-                        
-                            // Reads the data pckage
+                        if(strcmp(action, "DA") == 0) {
+                            // Converts the sizeStreamOrId to decimal number, if the number 
+                            //of bytes read is not the same that is indicate, we need to read again from the source
                             if(strlen(bufferUp) != (int) strtol(sizeStreamOrId, NULL, 16))
                                 checkReadUp = 1;
-                       
                             else {
                                 // Retransmit data to its clients
                                 for (int i = 0; i < tcpsessions; ++i){
@@ -285,17 +283,16 @@ int main(int argc, char const *argv[]) {
                                         DATA(clients.fd[i], strlen(bufferUp), bufferUp);
                                     }
                                 }
+                                // Inputs the string terminator
+                                bufferUp[0]= '\0';
                             }
-                            bufferUp[0]= '\0';
                         }
-
-
-                        else if(strcmp(action, "WE ") == 0) {
-
+                        else if(strcmp(action, "WE") == 0) {
+                            printf("I received a WELCOME\n");
                             //in this case sizeId received is sizeStream
                             if(strcmp(sizeStreamOrId, streamId) == 0) {
                                 NEW_POP(fdUp);
-                              }
+                            }
                             
                             bufferUp[0]= '\0';
                         }
@@ -304,15 +301,14 @@ int main(int argc, char const *argv[]) {
                     // if checkReadUp = 1 concatennate bufferUp to received stream
                     else{
                         n = readTcp(fdUp, bufferUp);
-                        if(n == -1)  {
-                                printf("Dad left\n");
-                                // Chamar WHOISROOT
-                          }
+                        if(n == -1) {
+                            printf("Dad left\n");
+                            // Chamar WHOISROOT
+                        }
                         if(strlen(bufferUp) !=  (int) strtol(sizeStreamOrId, NULL, 16)) 
                                 checkReadUp = 1;
                        
                         else {
-
                             // Retransmit data to its clients
                             for (int i = 0; i < tcpsessions; ++i){
                                 if(clients.fd[i] != 0) {
