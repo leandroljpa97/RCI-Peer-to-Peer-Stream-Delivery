@@ -109,6 +109,13 @@ int main(int argc, char const *argv[]) {
     // Return state of the select
     int counter= 0;
 
+    // receive information from dad
+    char bufferUp[PACKAGETCP];
+
+    // flag that is 1 if we didn't read everything 
+    int checkReadUp = 0;
+
+
 	// Read Input Arguments of the program and set the default variables
     int dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIp, streamPort, ipaddr, tport, 
                        				uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs, 
@@ -225,13 +232,16 @@ int main(int argc, char const *argv[]) {
             else if(fdUp != -1 && FD_ISSET(fdUp, &fd_sockets)) {
                 printf("i received something from TCP \n");
 
-                if(root){
-                    char bufferUp[PACKAGETCP];
+                char bufferAux[BUFFER_SIZE];
+                char action[BUFFER_SIZE];
+                char sizeStreamOrId[BUFFER_SIZE];
 
-                    int n = readTcpStream(fdUp, bufferUp, PACKAGETCP);
+                if(root){
+
+                    int n = readTcp(fdUp, bufferUp);
 
                     // Stream is left
-                    if(n == -1) {
+                    if(n == 0) {
                         printf("Stream is gone \n");
                         close(fdUp);
                         fdUp = -1;
@@ -249,55 +259,69 @@ int main(int argc, char const *argv[]) {
                 else if(!root){
                     printf("i received from my dad \n");
 
-                    char bufferUp[TCP_MESSAGE_TYPE];
-
                     int n;
-                    
-                    if((n = readTcp(fdUp, bufferUp, TCP_MESSAGE_TYPE)) != TCP_MESSAGE_TYPE) {
+
+                    // if flag is 0 we have to do everything normal - read DA or WE 
+                    if(!checkReadUp){
+                        n = readTcp(fdUp, bufferAux);
                         if(n == -1)  {
-                            printf("Dad left\n");
-                            // Chamar WHOISROOT
-                        }
-                        else
-                            printf("Error reading message from dad\n");
-                    }
-                    
-                    if(strcmp(bufferUp, "DA ") == 0) {
-                        char sizeBuffer[] = "0000";
-                        char bufferData[PACKAGETCP];
+                                printf("Dad left\n");
+                                // Chamar WHOISROOT
+                          }
 
-                        // Reads the size of the data package
-                        if(readTcp(fdUp, sizeBuffer, TCP_MESSAGE_SIZE) != TCP_MESSAGE_SIZE) {
-                            printf("Error reading message from dad\n");
-                        }
-                        // Reads the data pckage
-                        else if(readTcpStream(fdUp, bufferData, (int ) strtol(sizeBuffer, NULL, 16)) != (int ) strtol(sizeBuffer, NULL, 16)) {
-                            printf("Error reading message from dad\n");
-                        }
-                        else {
-                            printf("Receved stream %s\n", bufferData);
+                  
+                         n = sscanf(bufferUp,"%[^ ] %[^\n]\n%s",action, sizeStreamOrId, bufferUp);
 
-                            // Retransmit data to its clients
-                            for (int i = 0; i < tcpsessions; ++i)                 {
-                                if(clients.fd[i] != 0) {
-                                    DATA(clients.fd[i], strtol(sizeBuffer, NULL, 16), bufferUp);
+                        if(strcmp(action, "DA ") == 0) {
+                        
+                            // Reads the data pckage
+                            if(strlen(bufferUp) != (int) strtol(sizeStreamOrId, NULL, 16))
+                                checkReadUp = 1;
+                       
+                            else {
+                                // Retransmit data to its clients
+                                for (int i = 0; i < tcpsessions; ++i){
+                                    if(clients.fd[i] != 0) {
+                                        DATA(clients.fd[i], strlen(bufferUp), bufferUp);
+                                    }
                                 }
                             }
+                            bufferUp[0]= '\0';
                         }
-                    }
-                    else if(strcmp(bufferUp, "WE ") == 0) {
-                        char bufferUpStreamId[TCP_MESSAGE_STREAMID];
 
-                        if(readTcp(fdUp, bufferUpStreamId, TCP_MESSAGE_STREAMID) != TCP_MESSAGE_STREAMID) {
-                            printf("Error reading message from dad\n");
-                        }
-                        else {
-                            printf("Receved streamId %s", bufferUpStreamId);
 
-                            if(strcmp(bufferUpStreamId, streamId) == 0) {
+                        else if(strcmp(action, "WE ") == 0) {
+
+                            //in this case sizeId received is sizeStream
+                            if(strcmp(sizeStreamOrId, streamId) == 0) {
                                 NEW_POP(fdUp);
-                            }
+                              }
+                            
+                            bufferUp[0]= '\0';
                         }
+
+                    }
+                    // if checkReadUp = 1 concatennate bufferUp to received stream
+                    else{
+                        n = readTcp(fdUp, bufferUp);
+                        if(n == -1)  {
+                                printf("Dad left\n");
+                                // Chamar WHOISROOT
+                          }
+                        if(strlen(bufferUp) !=  (int) strtol(sizeStreamOrId, NULL, 16)) 
+                                checkReadUp = 1;
+                       
+                        else {
+
+                            // Retransmit data to its clients
+                            for (int i = 0; i < tcpsessions; ++i){
+                                if(clients.fd[i] != 0) {
+                                    DATA(clients.fd[i], strlen(bufferUp), bufferUp);
+                                }
+                            }
+                            checkReadUp = 0;
+                        }
+
                     }
                 }                
             }

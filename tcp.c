@@ -118,75 +118,25 @@ int createTcpServer() {
 }
 
 
-int readTcpStream(int fd, char* buffer, int size) {
+
+int readTcp(int fd, char* buffer) {
     int nReceived;   
-    int nbytes;     
-    int nLeft;  
     char aux[PACKAGETCP];    
 
-    nLeft = size;
-    nbytes = 0;
-
-    while(nLeft > 0) {
-        printf("ola\n");
-        nReceived = read(fd, aux, nLeft);
-        printf("nReceived = %d \n",nReceived);
-        // Received an EOF
-        if(nReceived == -1) {
-            printf("Dad left\n");
-            return -1;
-        }
-        // Nothing left to read
-        else if(nReceived == 0) {
-            return nbytes;
-        }
-
-        nLeft -= nReceived;
-        buffer += nReceived;
-        nbytes += nReceived;
-
-        aux[nReceived] = '\0';
-        printf("aux %s\n", aux);
-        strcat(buffer, aux);
-        printf("buffer %s\n", buffer);
-    }
-
-    return nbytes;
-}
-
-int readTcp(int fd, char* buffer, int size) {
-    int nReceived;   
-    int nbytes;     
-    int nLeft;  
-    char aux[PACKAGETCP];    
-
-    nLeft = size;
-    nbytes = 0;
-
-    while(1) {
-        nReceived = read(fd, aux, nLeft);
-        if(nReceived <= 0){
-            printf("error receiving message \n");
-            return 0;
-
-        }
-
-        nLeft -= nReceived;
-        buffer += nReceived;
-        nbytes += nReceived;
-
-        if(aux[nReceived-1] == '\n' )
-            break;
-
-        aux[nReceived] = '\0';
-        strcat(buffer, aux);
+    nReceived = read(fd, aux, sizeof(aux));
+    if(nReceived <= 0){
+        printf("error receiving message \n");
+        return 0;
     }
 
     aux[nReceived] = '\0';
     strcat(buffer, aux);
 
-    return nbytes;
+
+    return nReceived;
 }
+
+
 
 int writeTcp(int _fd, char *data, int size) {
     int nSended;   
