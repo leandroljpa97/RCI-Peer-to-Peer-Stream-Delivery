@@ -38,14 +38,15 @@ int NEW_POP(int _fd) {
     // Creates NEW_POP message
     strcpy(buffer, "NP ");
     strcat(buffer, ipaddr);
-    strcpy(buffer,":");
-    strcpy(buffer, tport);
+    strcat(buffer,":");
+    strcat(buffer, tport);
     strcat(buffer,"\n");
 
     // finds the size of the NEW_POP message
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
+    printf("o buffer é %s \n", buffer);
     if(writeTcp(_fd, buffer, i + 1) != i + 1) 
         return 0;
 
@@ -60,8 +61,8 @@ int REDIRECT(int _fd, char _ipaddr[], char _tport[]) {
     // Creates REDIRECT message
     strcpy(buffer, "RD ");
     strcat(buffer, _ipaddr);
-    strcpy(buffer,":");
-    strcpy(buffer, _tport);
+    strcat(buffer,":");
+    strcat(buffer, _tport);
     strcat(buffer,"\n");
 
     // finds the size of the NEW_POP message
@@ -111,9 +112,12 @@ int DATA(int _fd, int nbytes, char _data[]) {
     strcat(buffer,"\n");
     strcat(buffer, _data);
 
+    printf("dentro da func DATA: %d \n",strlen(_data));
     // finds the size of the NEW_POP message
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
+
+    printf("a data que vou enviar é : %s \n",buffer);
 
     if(writeTcp(_fd, buffer, i + 1) != i + 1) 
         return 0;

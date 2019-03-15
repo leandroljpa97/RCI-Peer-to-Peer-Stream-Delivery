@@ -107,7 +107,7 @@ int createTcpServer() {
         exit(1);
     }
 
-    if(listen(fd, bestpops) == -1) {
+    if(listen(fd, tcpsessions) == -1) {
         printf("Error listen\n");
         exit(1);
     }
@@ -138,6 +138,7 @@ int readTcp(int fd, char* buffer) {
 
 
 int writeTcp(int _fd, char *data, int size) {
+    printf("dentro do tcp é size : %d \n",size);
     int nSended;   
     int nbytes;     
     int nLeft;      

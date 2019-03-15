@@ -112,6 +112,16 @@ int main(int argc, char const *argv[]) {
     // receive information from dad
     char bufferUp[PACKAGETCP];
 
+    char bufferDown[BUFFER_SIZE];
+    char bufferAux[BUFFER_SIZE];
+    char action[BUFFER_SIZE];
+    char sizeStreamOrId[BUFFER_SIZE];
+    char actionChild[BUFFER_SIZE];
+    char newPopPort[BUFFER_SIZE];
+    char newPopIp[BUFFER_SIZE];
+
+
+
     // flag that is 1 if we didn't read everything 
     int checkReadUp = 0;
 
@@ -232,9 +242,7 @@ int main(int argc, char const *argv[]) {
             else if(fdUp != -1 && FD_ISSET(fdUp, &fd_sockets)) {
                 printf("i received something from TCP \n");
 
-                char bufferAux[BUFFER_SIZE];
-                char action[BUFFER_SIZE];
-                char sizeStreamOrId[BUFFER_SIZE];
+               
 
                 if(root){
                     // Reads the stream from the source up to the maximum allowed size
@@ -250,11 +258,13 @@ int main(int argc, char const *argv[]) {
 
                     printf("o buffer tcp é: %s \n", bufferUp);
                     // Analise client list and send message
-                    for (int i = 0; i < tcpsessions; ++i)                 {
+                    for (int i = 0; i < tcpsessions; ++i){
                         if(clients.fd[i] != 0) {
                             DATA(clients.fd[i], n, bufferUp);
                         }
                     }
+                    printf("o strlen(bufferUP é %d \n",strlen(bufferUp));
+                    bufferUp[0] = '\0';
                 }
                 else if(!root){
                     printf("i received from my dad \n");
@@ -263,17 +273,27 @@ int main(int argc, char const *argv[]) {
 
                     // if flag is 0 we have to do everything normal - read DA or WE 
                     if(!checkReadUp) {
+                        printf("o checkReadUp tá a 0 \n");
                         n = readTcp(fdUp, bufferAux);
                         if(n == -1)  {
                             printf("Dad left\n");
                             // Chamar WHOISROOT
                         }
                   
-                        n = sscanf(bufferUp,"%[^ ] %[^\n]\n%s",action, sizeStreamOrId, bufferUp);
+                        n = sscanf(bufferAux,"%[^ ] %[^\n]\n%s",action, sizeStreamOrId, bufferUp);
+                        bufferAux[0] = '\0';
+                        printf("action: %s \n",action);
+                        printf("sizeStreamOrId: %s \n",sizeStreamOrId);
+                         printf("bufferUp %s \n",bufferUp);
+
 
                         if(strcmp(action, "DA") == 0) {
                             // Converts the sizeStreamOrId to decimal number, if the number 
                             //of bytes read is not the same that is indicate, we need to read again from the source
+                            printf("strlen : %d \n",strlen(bufferUp));
+                            printf("size recebido: %d \n",(int) strtol(sizeStreamOrId, NULL, 16));
+                            if(bufferUp[strlen(bufferUp)]=='\n')
+                                printf("recebi o barraN \n");
                             if(strlen(bufferUp) != (int) strtol(sizeStreamOrId, NULL, 16))
                                 checkReadUp = 1;
                             else {
@@ -285,7 +305,9 @@ int main(int argc, char const *argv[]) {
                                 }
                                 // Inputs the string terminator
                                 bufferUp[0]= '\0';
+                                sizeStreamOrId[0]= '\0';
                             }
+                            action[0] = '\0';
                         }
                         else if(strcmp(action, "WE") == 0) {
                             printf("I received a WELCOME\n");
@@ -295,7 +317,11 @@ int main(int argc, char const *argv[]) {
                             }
                             
                             bufferUp[0]= '\0';
+                            action[0] = '\0';
+                            sizeStreamOrId[0] = '\0';
+
                         }
+
 
                     }
                     // if checkReadUp = 1 concatennate bufferUp to received stream
@@ -316,6 +342,7 @@ int main(int argc, char const *argv[]) {
                                 }
                             }
                             checkReadUp = 0;
+                            sizeStreamOrId[0] = '\0';
                         }
 
                     }
@@ -330,11 +357,13 @@ int main(int argc, char const *argv[]) {
                 struct sockaddr addr_tcpServer;
                 unsigned int addrlenTcpServer = sizeof(struct sockaddr);
 
-                if((newfd = accept(fdDown, (struct sockaddr *) &addr_tcpServer, &addrlenTcpServer)) == -1) {
-                    printf("Error while accepting new client\n");
-                    exit(1);
-                }
                 if(clients.available > 0){
+
+                    if((newfd = accept(fdDown, (struct sockaddr *) &addr_tcpServer, &addrlenTcpServer)) == -1) {
+                        printf("Error while accepting new client\n");
+                        exit(1);
+                    }
+                    
                     if(insertFdClient(newfd, &clients)) {
                         // Sends the welcome message to the new client
                         if(!WELCOME(newfd)) {
@@ -356,7 +385,30 @@ int main(int argc, char const *argv[]) {
                 for(int i =0; i < tcpsessions; i++){
                     if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
                         printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
+                        int n; 
 
+                        n = readTcp(clients.fd[i], bufferDown);
+                        if(n == -1) {
+                            printf("Child gone\n");
+                            // Chamar WHOISROOT
+                        }
+                        printf("bufferDOwn é: %s \n",bufferDown);
+                        n = sscanf(bufferDown,"%[^ ] %[^:]:%[^\n]\n",actionChild, newPopIp, newPopPort);
+                        if(!strcmp(actionChild,"NP")){
+                            strcpy(clients.ip[i], newPopIp);
+                            strcpy(clients.port[i], newPopPort);
+
+                            printf(" clients.ip[i] :%s\n",clients.ip[i] );
+                            printf(" clients.port[i] :%s\n",clients.port[i] );
+
+
+                            actionChild[0] = '\0';
+                            newPopPort[0] = '\0';
+                            newPopIp[0] = '\0';
+                        }
+
+
+                        bufferDown[0] = '\0';
                     }
                 }
             }
