@@ -135,6 +135,22 @@ int readTcp(int fd, char* buffer) {
     return nReceived;
 }
 
+int readTcpNBytes(int fd, char* buffer, int nbytes) {
+    int nReceived;   
+    char aux[PACKAGETCP];    
+
+    nReceived = read(fd, aux, nbytes);
+    if(nReceived <= 0){
+        printf("error receiving message \n");
+        return 0;
+    }
+
+    aux[nReceived] = '\0';
+    strcat(buffer, aux);
+
+    return nReceived;
+}
+
 
 
 int writeTcp(int _fd, char *data, int size) {

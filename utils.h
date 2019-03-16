@@ -58,7 +58,13 @@ void ctrl_c_callback_handler(int signum);
 
 void error_confirmation(char*s);
 
+/* CLIENT STRUCTURE FUNCTIONS */
+
 void initClientStructure();
+
+void addClient(int _fd, char _ip[], char _port[]);
+
+void closeClient(int _fd);
 
 void closeAllClients();
 

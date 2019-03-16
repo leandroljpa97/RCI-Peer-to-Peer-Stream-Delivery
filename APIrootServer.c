@@ -92,10 +92,7 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
             exit(0);
         }
 
-        printf("recebi um popresp \n");
-        printf("_availableIAmRootPort:%s availableIAmRootPort: %s \n",_availableIAmRootIP , _availableIAmRootPort );
-
-        printf("%s", buffer);  
+        printf("recebi um popresp: %s\n", buffer);
     }
 
     freeaddrinfo(res);
@@ -150,7 +147,6 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
     strcat(buffer, ":");
     strcat(buffer, uport);
     strcat(buffer, "\n");
-    printf("o buffer no whoIsRoot é %s\n", buffer);
 
     // finds the size of the WHOISROOT message
     int i = 0;
@@ -198,10 +194,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
     	// Receives the response from the root server
         receiveUdp(fd, bufferRootServer, BUFFER_SIZE, &addr);
         sscanf(bufferRootServer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", action, stream, accessServerIP, accessServerPort);
-        printf("a action é: %s \n", action);
-        printf("a streamID é: %s \n", stream);
-        printf("o ip da root é %s \n", accessServerIP);
-        printf("o porto da root é %s \n", accessServerPort);
+
         // If the tree is empty, the program is the root stream. Change the state to root and goes to connect to a stream
         if(!strcmp(action, "URROOT")){
             // Indicates that the program is the root of a tree
@@ -215,11 +208,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         }
         // Receives the information that there's already a root on the tree 
         // and needs to go to the access server to acquire the correct IP and port
-        else if(!strcmp(action, "ROOTIS")){
-            printf("a streamID é: %s \n", stream);
-            printf("o ip da root é %s \n", accessServerIP);
-            printf("o porto da root é %s \n", accessServerPort);
-                    
+        else if(!strcmp(action, "ROOTIS")){                    
             *root = 0;
 
             char availableIAmRootIP[IP_SIZE], availableIAmRootPort[BUFFER_SIZE];
@@ -228,9 +217,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             if(findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == 0) {
                 WHOISROOT(root, fdAccessServer, fdUp);
             }
-            printf("DadFound\n");
-            printf("availableIAmRootIP %s\n", availableIAmRootIP);
-            printf("availableIAmRootPort %s\n", availableIAmRootPort);
+
             *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
         }
         else if(!strcmp(action, "ERROR")) {

@@ -14,6 +14,8 @@ int createTcpServer();
 
 int readTcp(int fd, char* buffer);
 
+int readTcpNBytes(int fd, char* buffer, int nbytes);
+
 int writeTcp(int _fd, char *data, int size);
 
 #endif

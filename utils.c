@@ -69,6 +69,33 @@ void initClientStructure() {
     }
 }
 
+void addClient(int _fd, char _ip[], char _port[]) {
+    int i;
+    for (i = 0; i < tcpsessions; ++i) {
+        if(clients.fd[i] == 0) {
+            clients.fd[i] = _fd;
+            break;
+        }
+    }
+    strcpy(clients.ip[i], _ip);
+    strcpy(clients.port[i], _port);
+    clients.available--;
+}
+
+void closeClient(int _fd) {
+    int i;
+    for (i = 0; i < tcpsessions; ++i) {
+        if(clients.fd[i] == _fd) {
+            clients.fd[i] = 0;
+            break;
+        }
+    }
+    clients.ip[i] = '\0';
+    clients.port[i] = '\0';
+    clients.available++;
+    close(_fd);
+}
+
 void closeAllClients() {
     for (int i = 0; i < tcpsessions; ++i) {
         if(clients.fd[i] != 0)

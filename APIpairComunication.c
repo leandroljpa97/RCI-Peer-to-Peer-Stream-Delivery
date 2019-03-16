@@ -104,22 +104,21 @@ int DATA(int _fd, int nbytes, char _data[]) {
 
     convertNumDoHex(nbytesHex, nbytes);
 
-    printf("%d in Hexadecimal = %s", nbytes, nbytesHex);
-
     // Creates STREAM_FLOWING message
     strcpy(buffer, "DA ");
     strcat(buffer, nbytesHex);
     strcat(buffer,"\n");
     strcat(buffer, _data);
 
-    printf("dentro da func DATA: %d \n",strlen(_data));
+    printf("dentro da func DATA: %d\n", (int) strlen(_data));
+   
     // finds the size of the NEW_POP message
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    printf("a data que vou enviar é : %s \n",buffer);
+    printf("i %d, a data que vou enviar é : %s \n", i ,buffer);
 
-    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+    if(writeTcp(_fd, buffer, i) != i) 
         return 0;
 
     printf("sent DATA\n");
