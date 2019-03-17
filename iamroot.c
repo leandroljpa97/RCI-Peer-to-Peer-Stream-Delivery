@@ -106,6 +106,7 @@ void insertAccessPoint(char _ip[], char _port[]){
             strcpy(accessPoints.port[i], _port);
 
             accessPoints.fd[i] = 1;
+	    accessPoints.available -- ;
 
             return;
         }
