@@ -557,7 +557,8 @@ int main(int argc, char const *argv[]) {
                         if(!strcmp(actionChild,"NP")){
                             addClient(clients.fd[i], newPopIp, newPopPort);
 
-                            insertAccessP_ifFree(newPopIp, newPopPort);
+                            if(root)
+                                insertAccessP_ifFree(newPopIp, newPopPort);
 
                             printf(" clients.ip[i]:%s\n", clients.ip[i]);
                             printf(" clients.port[i]:%s\n", clients.port[i]);
