@@ -129,21 +129,17 @@ int DATA(int _fd, int nbytes, char _data[]) {
 
 /* DISCORVERY OF THE ACCESS POINT */
 
-int POP_QUERY(int _fd, uint16_t _queryID) {
+int POP_QUERY(int _fd, char _queryId[], int _bestPops) {
 	char buffer[PACKAGETCP];
-	char tcpsessionsString[] = "00";
-	char queryIDHex[] = "0000";
+	char bestPopString[] = "00";
 
-    // Converts queryID to hex format
-    convertNumDoHex(queryIDHex, _queryID);
-	printf("%d in Hexadecimal = %s", _queryID, queryIDHex);
 
 	// Creates POP_QUERY message
     strcpy(buffer, "PQ ");
-    strcat(buffer, queryIDHex);
+    strcat(buffer, _queryId);
     strcat(buffer, " ");
-    sprintf(tcpsessionsString, "%d", tcpsessions);
-    strcat(buffer, tcpsessionsString);
+    sprintf(bestPopString, "%d", _bestPops);
+    strcat(buffer, bestPopString);
     strcat(buffer, "\n");
     printf("o buffer no whoIsRoot é %s\n", buffer);
 
@@ -159,24 +155,25 @@ int POP_QUERY(int _fd, uint16_t _queryID) {
     return 1;
 }
 
-int POP_REPLY(int _fd, uint16_t _queryID, int avails) {
+int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avails) {
 	char buffer[PACKAGETCP];
 	char availsString[] = "00";
 
 	// Converts queryID to hex format
-	char queryIDHex[] = "HEX_STYLE";
-	sprintf(queryIDHex, "%hu",  (unsigned int) _queryID);
-	printf("%d in Hexadecimal= %s", _queryID, queryIDHex);
+
+	/*char queryIDHex[] = "HEX_STYLE";
+	sprintf(queryIDHex, "%hu",  (char*) _queryID);
+	printf("%s in Hexadecimal= %s", _queryID, queryIDHex); */
 
 	// Creates POP_REPLY message
     strcpy(buffer, "PR ");
-    strcat(buffer, queryIDHex);
+    strcat(buffer, _queryID);
     strcat(buffer, " ");
-    strcat(buffer, ipaddr);
+    strcat(buffer, _ipaddr);
     strcat(buffer, ":");
-    strcat(buffer, tport);
+    strcat(buffer, _tport);
     strcat(buffer, " ");
-    sprintf(availsString, "%d", avails);
+    sprintf(availsString, "%d", _avails);
     strcat(buffer, availsString);
     strcat(buffer, "\n");
     printf("o buffer no whoIsRoot é %s\n", buffer);

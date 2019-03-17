@@ -24,6 +24,7 @@ COMMENTS
 #include "APIaccessServer.h"
 #include "udp.h"
 #include "tcp.h"
+#include "list.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,7 @@ COMMENTS
 
 #define PACKAGE_UDP 128
 #define PACKAGE_TCP 128
+
 
 
 //--------------------------------- ACCESS SERVER -----------------------------------------------------------
@@ -73,10 +75,15 @@ void findAccessPoint(){
     }
 
     else{
+            char queryIdHex[] = "0000";
+
+            // Converts queryID to hex format
+            convertNumDoHex(queryIdHex, queryId);
+            printf("%d in Hexadecimal = %s", queryId, queryIdHex);
 
         for(int i = 0; i < tcpsessions; i++){
             if(clients.fd[i] != 0)
-                POP_QUERY(clients.fd[i],queryId);
+                POP_QUERY(clients.fd[i],queryIdHex,bestpops);
         }
 
         queryId++;
@@ -254,6 +261,9 @@ int main(int argc, char const *argv[]) {
     char actionChild[BUFFER_SIZE];
     char newPopPort[BUFFER_SIZE];
     char newPopIp[BUFFER_SIZE];
+    char queryIdAux[BUFFER_SIZE];
+    char bestpopsAux[BUFFER_SIZE];
+    char avails[BUFFER_SIZE];
 
 
 
@@ -475,7 +485,44 @@ int main(int argc, char const *argv[]) {
                             idStream[0] = '\0';
 
                         }
+
+                        else if(!strcmp(action,"PQ ")){
+                            n = readTcpNBytes(fdUp, queryIdAux, TCP_MESSAGE_SIZE);
+
+                            if(n == -1)  {
+                                printf("Dad left\n");
+                                // Chamar WHOISROOT
+                            }
+                            n = readTcp(fdUp,bestpopsAux);
+
+                            if(n == -1)  {
+                                printf("Dad left\n");
+                                // Chamar WHOISROOT
+                            }
+
+                            if(clients.available > 0){
+
+                                POP_REPLY(fdUp, queryIdAux, ipaddr, tport, clients.available);
+
+                                if(atoi(bestpopsAux) > clients.available){
+
+                                    for(int j = 0; j < tcpsessions; j++){
+                                        if(clients.fd[j] != 0)
+                                            POP_QUERY(clients.fd[j],queryIdAux, atoi(bestpopsAux) - clients.available);
+                                    }
+                                }
+                                insert_at_first(queryIdAux, atoi(bestpopsAux) - clients.available);
+
+                            }
+
+
+
+                        }
+
                         action[0] = '\0';
+                        sizeStream[0] = '\0';
+                        bestpopsAux[0] = '\0';
+                        queryIdAux[0] = '\0';
                     }
                     // if checkReadUp = 1 concatennate bufferUp to received stream
                     else{
@@ -488,7 +535,7 @@ int main(int argc, char const *argv[]) {
 
                         printf("bufferUp %s\n", bufferUp);
 
-                        if(nAlreadyReceived + n !=  (int) strtol(sizeStream, NULL, 16)) {
+                        if((nAlreadyReceived + n) !=  (int) strtol(sizeStream, NULL, 16)) {
                             checkReadUp = 1;
                             nAlreadyReceived += n;
                         }
@@ -548,14 +595,23 @@ int main(int argc, char const *argv[]) {
                         printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
                         int n; 
 
-                        n = readTcp(clients.fd[i], bufferDown);
-                        if(n == -1) {
-                            closeClient(clients.fd[i]);
-                            printf("Child gone\n");
+                        n = readTcpNBytes(clients.fd[i], actionChild, TCP_MESSAGE_TYPE);
+                        if(n == -1)  {
+                            printf("Child left\n");
+                            // Chamar WHOISROOT
                         }
-                        printf("bufferDOwn é: %s \n",bufferDown);
-                        n = sscanf(bufferDown,"%[^ ] %[^:]:%[^\n]\n",actionChild, newPopIp, newPopPort);
-                        if(!strcmp(actionChild,"NP")){
+                        printf("actionChild: %s\n", actionChild);
+
+                        if(strcmp(actionChild, "NP ") == 0) {
+                            // Reads the amount of bytes that will receive in 4 hex digits
+                            n = readTcp(clients.fd[i],bufferDown);
+                            if(n == -1){
+                                printf("Child left\n");
+                                // Chamar WHOISROOT
+                            }
+
+                            n = sscanf(bufferDown,"%[^:]:%[^\n]\n",newPopIp, newPopPort);
+                        
                             addClient(clients.fd[i], newPopIp, newPopPort);
 
                             if(root)
@@ -565,19 +621,47 @@ int main(int argc, char const *argv[]) {
                             printf(" clients.port[i]:%s\n", clients.port[i]);
 
 
-                            actionChild[0] = '\0';
-                            newPopPort[0] = '\0';
-                            newPopIp[0] = '\0';
                         }
 
-                        else if(!strcmp(actionChild,"PR")){
-                            insertAccessPoint(newPopIp, newPopPort);
-                            actionChild[0] = '\0';
-                            newPopPort[0] = '\0';
-                            newPopIp[0] = '\0';
+                        else if(!strcmp(actionChild,"PR ")){
+                            int availsSend;
+                            n = readTcp(clients.fd[i], bufferDown);
+                            if(n == -1){
+                                printf("Child left\n");
+                                // Chamar WHOISROOT
+                            }
+
+                            n = sscanf(bufferDown,"%[^ ] %[^:]:%[^ ] %[^\n]\n",queryIdAux , newPopIp, newPopPort, avails);
+
+                            if(root)
+                                insertAccessPoint(newPopIp, newPopPort);
+
+                            else{
+
+                                n = getLeft(queryIdAux);
+                                if(atoi(avails) <= n)
+                                    availsSend = atoi(avails);
+                                else 
+                                    availsSend = n;
+
+                                if(availsSend != 0){
+                                    POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend);
+                                    for(int j = 0; j < availsSend;j++)
+                                        decrementItem(queryIdAux);
+                                }
+
+                                
+                            }
+                          
                         }
+
 
                         bufferDown[0] = '\0';
+                        actionChild[0] = '\0';
+                        newPopPort[0] = '\0';
+                        newPopIp[0] = '\0';
+                        avails[0] = '\0';
+                        queryIdAux[0] = '\0';
                     }
                 }
             }
@@ -588,3 +672,7 @@ int main(int argc, char const *argv[]) {
 
 	return 0;
 }
+
+
+
+

@@ -6,7 +6,7 @@
 
 
 #define TRIES 3
-#define TIMEOUT 4
+#define TIMEOUT 10
 #define TIMEOUT_REMOVE 2
 
 #define BUFFER_SIZE 256
