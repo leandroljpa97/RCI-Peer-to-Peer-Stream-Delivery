@@ -25,8 +25,142 @@ COMMENTS
 #include "udp.h"
 #include "tcp.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
 #define PACKAGE_UDP 128
 #define PACKAGE_TCP 128
+
+
+//--------------------------------- ACCESS SERVER -----------------------------------------------------------
+
+
+
+void  sendRandomAccessPoint(){
+    int i;
+    time_t t;
+   
+    /* Intializes random number generator */
+    srand((unsigned) time(&t));
+
+    while(1){
+        i =  rand() % bestpops;
+        if(accessPoints.fd[i] != 0){
+
+            strcpy(ipAccessPoint,accessPoints.ip[i]);
+            strcpy(portAccessPoint,accessPoints.port[i]);
+
+            accessPoints.available ++ ;
+            //this variable when is equal to bestpops so the root has to 
+            //perform POP__QUERY! so that it is impossible to be greater than bestpops
+            if(accessPoints.available > bestpops)
+                accessPoints.available = bestpops;
+
+            return;
+        }
+    
+    }
+
+    
+}
+
+void findAccessPoint(){
+
+    if(accessPoints.available < bestpops){
+        sendRandomAccessPoint();
+        return;
+    }
+
+    else{
+
+        for(int i = 0; i < tcpsessions; i++){
+            if(clients.fd[i] != 0)
+                POP_QUERY(clients.fd[i],queryId);
+        }
+
+        queryId++;
+        //verify if queryId is greater than 2^16 -1 ..
+        if( queryId > 65534)
+            queryId = 0;
+
+        sendRandomAccessPoint();
+    }
+
+    
+
+}
+
+void insertAccessPoint(char _ip[], char _port[]){
+
+    //when the list of accessPOints is full!!
+    if(accessPoints.available == 0)
+        return;
+
+    for(int i = 0; i < bestpops; i++){
+
+        if(accessPoints.fd[i] == 0){
+            accessPoints.ip[i][0] = '\0';
+            accessPoints.port[i][0] = '\0';
+            strcpy(accessPoints.ip[i], _ip);
+            strcpy(accessPoints.port[i], _port);
+
+            accessPoints.fd[i] = 1;
+
+            return;
+        }
+    }
+
+    //if there isn't any position free but it is time to refresh the list of accessPOints!
+    int j;
+    time_t t;
+   
+    /* Intializes random number generator */
+    srand((unsigned) time(&t));
+    j =  rand() % bestpops;
+
+    accessPoints.ip[j][0] = '\0';
+    accessPoints.port[j][0] = '\0';
+        
+
+    strcpy(accessPoints.ip[j], _ip);
+    strcpy(accessPoints.port[j], _port);
+    
+    accessPoints.fd[j] = 1;
+    accessPoints.available -- ;
+
+    return;
+        
+
+}
+
+
+void insertAccessP_ifFree(char _newPopIp[], char _newPopPort[]){
+
+    for(int i = 0; i < bestpops; i++){
+
+        if(accessPoints.fd[i] == 0){
+            accessPoints.ip[i][0] = '\0';
+            accessPoints.port[i][0] = '\0';
+            strcpy(accessPoints.ip[i], _newPopIp);
+            strcpy(accessPoints.port[i], _newPopPort);
+
+            accessPoints.fd[i] = 1;
+
+            return;
+        }
+    }
+
+}
+
+
+
+
+//-----------------------------------------------------------------------------------------
+
+
+
+
 
 void interpRootServerMsg(char _data[]) {
     char content[50];
@@ -86,9 +220,6 @@ int main(int argc, char const *argv[]) {
     initializations();
     // Indicates if the iamroot app is a root of the stream
 	int root = 0;
-
-    // Indicatse the number of the Query in 16 bits
-    uint16_t _queryID = 0;
 	
 	// Files descriptor
     // fdUp enables TCP communication with the source (if this node is root) or with upper iamroot
@@ -145,6 +276,10 @@ int main(int argc, char const *argv[]) {
     }
 
     WHOISROOT(&root, &fdAccessServer, &fdUp);
+
+    if(root)
+        initAccessPoints();
+
 
     printf("fiz WHOISROOT\n");
 
@@ -229,7 +364,8 @@ int main(int argc, char const *argv[]) {
                         POPRESP(fdAccessServer, &addr, ipaddr, tport);
                     }
                     else {
-                        // Implementar procura na arvore
+                        findAccessPoint();
+                        POPRESP(fdAccessServer, &addr, ipAccessPoint, portAccessPoint);
                     }
                 }
             }
@@ -421,10 +557,19 @@ int main(int argc, char const *argv[]) {
                         if(!strcmp(actionChild,"NP")){
                             addClient(clients.fd[i], newPopIp, newPopPort);
 
+                            insertAccessP_ifFree(newPopIp, newPopPort);
+
                             printf(" clients.ip[i]:%s\n", clients.ip[i]);
                             printf(" clients.port[i]:%s\n", clients.port[i]);
 
 
+                            actionChild[0] = '\0';
+                            newPopPort[0] = '\0';
+                            newPopIp[0] = '\0';
+                        }
+
+                        else if(!strcmp(actionChild,"PR")){
+                            insertAccessPoint(newPopIp, newPopPort);
                             actionChild[0] = '\0';
                             newPopPort[0] = '\0';
                             newPopIp[0] = '\0';

@@ -33,6 +33,16 @@ int debug = DEFAULT_DEBUG;
 // Structure with clients information
 clients_t clients;
 
+// in the case to be accessPoints, fd is to indicate if this position is available to newAccessPoint or not available
+ clients_t accessPoints;
+
+// Indicatse the number of the Query in 16 bits
+uint queryId = 0;
+
+char ipAccessPoint[];
+char portAccessPoint[];
+
+
 void ctrl_c_callback_handler(int signum) {
     printf("sai por CTRL_C \n ");
 
@@ -58,7 +68,17 @@ void initializations() {
         error_confirmation("Could not handle SIGINT or SIGPIPE");
 }
 
-void initClientStructure() {
+void initAccessPoints() {
+    accessPoints.available = bestpops;
+    accessPoints.ip = (char **) calloc(bestpops, sizeof(char *));
+    accessPoints.port = (char **) calloc(bestpops, sizeof(char *));
+    for (int i = 0; i < bestpops; ++i) {
+        accessPoints.ip[i] = (char *) calloc(IP_SIZE, sizeof(char));
+        accessPoints.port[i] = (char *) calloc(PORT_SIZE, sizeof(char));
+    }
+}
+
+void initClientStructure(){
     clients.available = tcpsessions;
     clients.fd = (int *) calloc(tcpsessions, sizeof(int));
     clients.ip = (char **) calloc(tcpsessions, sizeof(char *));
@@ -67,6 +87,7 @@ void initClientStructure() {
         clients.ip[i] = (char *) calloc(IP_SIZE, sizeof(char));
         clients.port[i] = (char *) calloc(PORT_SIZE, sizeof(char));
     }
+
 }
 
 void addClient(int _fd, char _ip[], char _port[]) {
@@ -320,5 +341,6 @@ void setTimeOut(struct timeval*_t1, struct timeval *_t2) {
     _t2->tv_sec = TIMEOUT;
     _t1 = _t2;
 }
+
 
 

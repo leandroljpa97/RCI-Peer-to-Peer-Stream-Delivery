@@ -4,6 +4,7 @@
 // Library for special types of Int
 #include <stdint.h>
 
+
 #define TRIES 3
 #define TIMEOUT 4
 #define TIMEOUT_REMOVE 2
@@ -28,12 +29,15 @@
 #define DEFAULT_DATA_STREAM 1
 #define DEFAULT_DEBUG 0
 
+//use this structure to childreens of each iamRoot and in the case  of being root, to accessPoints
 typedef struct _clients {
 	int *fd;
 	int available;
 	char **ip;
 	char **port;
 } clients_t;
+
+
 
 extern char streamId[];
 extern char streamIp[];
@@ -50,17 +54,33 @@ extern int tsecs;
 extern int dataStream;
 extern int debug;
 
+//variables stored to iamroot that is finding new accessPoint!
+extern char ipAccessPoint[IP_SIZE];
+extern char portAccessPoint[PORT_SIZE];
+
 // Structure with clients information
 extern clients_t clients;
+
+// in the case to be accessPoints, fd is to indicate if this position is available to newAccessPoint or not available
+extern clients_t accessPoints;
+
+// Indicatse the number of the Query in 16 bits
+extern uint queryId ;
 
 
 void ctrl_c_callback_handler(int signum);
 
 void error_confirmation(char*s);
 
+// init stucture belong to root and save the accessPoints
+
+void initAccessPoints();
+
+
 /* CLIENT STRUCTURE FUNCTIONS */
 
 void initClientStructure();
+
 
 void addClient(int _fd, char _ip[], char _port[]);
 

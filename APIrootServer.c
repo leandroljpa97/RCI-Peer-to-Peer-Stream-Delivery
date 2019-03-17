@@ -205,6 +205,8 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
 
             // Access to stream to start transmission
             *fdUp = connectToStream();
+
+            
         }
         // Receives the information that there's already a root on the tree 
         // and needs to go to the access server to acquire the correct IP and port
