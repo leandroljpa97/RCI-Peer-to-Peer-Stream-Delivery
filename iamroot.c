@@ -620,7 +620,6 @@ int main(int argc, char const *argv[]) {
                             printf(" clients.ip[i]:%s\n", clients.ip[i]);
                             printf(" clients.port[i]:%s\n", clients.port[i]);
 
-
                         }
 
                         else if(!strcmp(actionChild,"PR ")){
