@@ -33,8 +33,8 @@ int debug = DEFAULT_DEBUG;
 // Structure with clients information
 clients_t clients;
 
-// in the case to be accessPoints, fd is to indicate if this position is available to newAccessPoint or not available
- clients_t accessPoints;
+// number of AP availables on the list
+int numberOfAP;
 
 // Indicatse the number of the Query in 16 bits
 uint16_t queryId = 0;
@@ -68,16 +68,6 @@ void initializations() {
         error_confirmation("Could not handle SIGINT or SIGPIPE");
 }
 
-void initAccessPoints() {
-    accessPoints.available = bestpops;
-    accessPoints.ip = (char **) calloc(bestpops, sizeof(char *));
-    accessPoints.port = (char **) calloc(bestpops, sizeof(char *));
-    for (int i = 0; i < bestpops; ++i) {
-        accessPoints.ip[i] = (char *) calloc(IP_SIZE, sizeof(char));
-        accessPoints.port[i] = (char *) calloc(PORT_SIZE, sizeof(char));
-    }
-}
-
 void initClientStructure(){
     clients.available = tcpsessions;
     clients.fd = (int *) calloc(tcpsessions, sizeof(int));
@@ -101,6 +91,40 @@ void addClient(int _fd, char _ip[], char _port[]) {
     strcpy(clients.ip[i], _ip);
     strcpy(clients.port[i], _port);
     clients.available--;
+}
+
+void deleteClient(int _fd) {
+    int i;
+    for (i = 0; i < tcpsessions; ++i) {
+        if(clients.fd[i] == _fd) {
+            clients.fd[i] = 0;
+            break;
+        }
+    }
+    memset(clients.ip[i], '\0', IP_SIZE);
+    strcpy(clients.port[i],'\0', PORT_SIZE);
+    clients.available++;
+}
+int insertFdClient(int _newfd, clients_t *_clients) {
+    for(int i = 0; i < tcpsessions; i++){
+        if(_clients->fd[i] == 0){
+            _clients->fd[i] = _newfd;
+            _clients->available--;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int deleteFdClient(int _delfd, clients_t *_clients) {
+    for(int i = 0; i < tcpsessions; i++){
+        if(_clients->fd[i] == _delfd){
+            _clients->fd[i] = 0;
+            _clients->available++;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 void closeClient(int _fd) {
@@ -174,27 +198,6 @@ void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd) {
 int checkPort(int _port){
     if(_port > 1024 && _port < 65535)
         return 1;
-    return 0;
-}
-
-int insertFdClient(int _newfd, clients_t *_clients) {
-    for(int i = 0; i < tcpsessions; i++){
-        if(_clients->fd[i] == 0){
-            _clients->fd[i] = _newfd;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-int deleteFdClient(int _delfd, clients_t *_clients) {
-    for(int i = 0; i < tcpsessions; i++){
-        if(_clients->fd[i] == _delfd){
-            _clients->fd[i] = 0;
-            _clients->available++;
-            return 1;
-        }
-    }
     return 0;
 }
 

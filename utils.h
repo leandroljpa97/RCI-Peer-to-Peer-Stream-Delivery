@@ -61,8 +61,8 @@ extern char portAccessPoint[PORT_SIZE];
 // Structure with clients information
 extern clients_t clients;
 
-// in the case to be accessPoints, fd is to indicate if this position is available to newAccessPoint or not available
-//extern clients_t accessPoints;
+// number of AP availables on the list
+extern int numberOfAP;
 
 // Indicatse the number of the Query in 16 bits
 extern uint16_t queryId ;
@@ -72,10 +72,6 @@ void ctrl_c_callback_handler(int signum);
 
 void error_confirmation(char*s);
 
-// init stucture belong to root and save the accessPoints
-
-void initAccessPoints();
-
 
 /* CLIENT STRUCTURE FUNCTIONS */
 
@@ -83,6 +79,8 @@ void initClientStructure();
 
 
 void addClient(int _fd, char _ip[], char _port[]);
+
+void deleteClient(int _fd);
 
 void closeClient(int _fd);
 

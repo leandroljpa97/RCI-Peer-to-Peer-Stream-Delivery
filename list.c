@@ -14,9 +14,13 @@
 #include <netdb.h>
 #include "list.h"
 
-
+// Lists
 clientList_t *accessPoints;
 queryIDList_t *queryIDList;
+
+// Pointer to client that is going to be given
+clientList_t *currentClientAP;
+
 
 
 void insertQueryID(char _queryID[], int _left) {
@@ -92,20 +96,44 @@ int getLeftQueryID(char _queryID[]) {
     return 0;
 }
 
+/* 
+    Funtion checks weather an AP is on the list
+    returns: 1 when it's not on the list or the bestpops number is < than the bestpops received to that AP
+             0 it's already on the list
+*/
+int isAPontTheList(char _port[], char _ip[], int _bestpops) {
+    clientList_t *aux = accessPoints;
 
+    while(aux!=NULL)
+    {
+        if((strcmp(aux->port,_port) == 0) && (strcmp(aux->ip,_ip) == 0)) {
+            if(_bestpops > aux->bestpops)
+                return 1;
+            else
+                return 0;
+        }
+        aux = aux->next;
+    }
+
+    return 1;
+}
 
 void insertAccessPoint(char _port[], char _ip[], int _bestpops) {
     clientList_t *aux = accessPoints;
 
-     while(aux!=NULL)
+    // Se ja estiver na lista, atualiza o seu valor
+    while(aux!=NULL)
     {
         if((strcmp(aux->port,_port) == 0) && (strcmp(aux->ip,_ip) == 0)) {
+            if(aux->negative > 0) {
+                aux->negative = 0;
+            }
             aux->bestpops = _bestpops;
             return;
         }
         aux = aux->next;
     }
-
+    // Caso não esteja na lista
     aux = accessPoints;
 
     clientList_t *new = (clientList_t *) malloc(sizeof(clientList_t));
@@ -118,51 +146,105 @@ void insertAccessPoint(char _port[], char _ip[], int _bestpops) {
     strcpy(new->ip, _ip);
     strcpy(new->port, _port);
     new->bestpops = _bestpops;
+    new->negative = 0;
 
+    if(numberOfAP == 0) {
+        currentClientAP = new;
+    }
     accessPoints = new;
+    
+    // Increases the number of AP on the list
+    numberOfAP += _bestpops;
+
+    aux = accessPoints;
+
+    // Runs the list in search of negative AP if numberOfAP > bestpops
+    if(numberOfAP > bestpops) {
+        while(aux!=NULL) {
+            // if there's a negative AP
+            if(aux->negative > 0) {
+                if(currentClientAP == aux) {
+                     // Goes to the next client on the list
+                    if(currentClientAP->next != NULL)
+                        currentClientAP = currentClientAP->next;
+                    else
+                        currentClientAP = accessPoints;
+                }
+                // Deletes the client and reduces the number of AP's
+                deleteClientAP(aux);
+                numberOfAP--;
+                return;
+            }
+            aux = aux->next;
+        }
+    }
+
+}
+
+void deleteClientAP(clientList_t  *removeIP) {
+    clientList_t *myNode = accessPoints, *previous=NULL;
+    int flag = 0;
+
+    while(myNode!=NULL) {
+        if(myNode == removeIP)
+        {
+            if(previous==NULL)
+                accessPoints = myNode->next;
+            else
+                previous->next = myNode->next;
+
+
+            flag = 1;
+            free(myNode); //need to free up the memory to prevent memory leak
+            break;
+        }
+
+        previous = myNode;
+        myNode = myNode->next;
+    }
+
+    if(flag==0)
+        printf("Key not found!\n");
 }
 
 /* 
+    Funtion returns the information contained in the currentAP and advances the pointer to the next AP on the list
     returns: 1 when it needs to find more things to populate the list
              0 success
-             -1 doesnt have an IP
 */
 int getAccessPoint(char *ip, char *port) {
-    clientList_t *aux1 = accessPoints;
-    clientList_t *aux2 = accessPoints;
-    int numberOfAP = 0;
+    // Sends the information from the currentClientAP
+    strcpy(ip, currentClientAP->ip);
+    strcpy(port, currentClientAP->port);
 
-    if(aux1 != NULL) {
-        numberOfAP = 1;
-        // Finds the last element of the list
-        while(aux1->next != NULL) {
-            aux2 = aux1;
-            aux1 = aux1->next;
-            numberOfAP++;
+    // When there's more AP than bestpops, decreses the number of bestpops of that AP or remove it from the list if there's no more positions
+    if(numberOfAP > bestpops) {
+        // Decreases the number of available connections for that AP
+        if(currentClientAP->bestpops > 1) {
+            currentClientAP->bestpops--;
         }
+        else {
+            clientList_t *aux = currentClientAP;
+            
+            deleteClientAP(aux);
+        }
+        numberOfAP--;
     }
-    else
-        return -1;
-
-    // Sends the information from the last element on the list
-    strcpy(ip, aux1->ip);
-    strcpy(port, aux1->port);
-
-    // Decreases the number of available connections
-    if(aux1->bestpops > 1) {
-        aux1->bestpops--;
-    }
+    // When there's less or equal AP than bestpops, increases the negative variable
     else {
-        // There's more than one element on the list -> delete element
-        if(aux1 != aux2) {
-            aux2->next = NULL;
-            free(aux1);
-        }
+        currentClientAP->negative++;
     }
 
-    if(numberOfAP <= ERASELIMIT) 
-        return 1;
+    // Goes to the next client on the list
+    if(currentClientAP->next != NULL)
+        currentClientAP = currentClientAP->next;
+    else
+        currentClientAP = accessPoints;
     
+    // When there's only bestpops AP on the list, sends the information to do POP_QUERY
+    if(numberOfAP <= bestpops)
+        return 1;
+
     return 0;
 }
 

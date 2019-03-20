@@ -264,6 +264,8 @@ int main(int argc, char const *argv[]) {
     char bestpopsAux[BUFFER_SIZE];
     char avails[BUFFER_SIZE];
 
+    // Resets the number of AP availables on the list
+    numberOfAP = 0;
 
 
     // flag that is 1 if we didn't read everything 
@@ -287,10 +289,6 @@ int main(int argc, char const *argv[]) {
 
     WHOISROOT(&root, &fdAccessServer, &fdUp);
 
-    if(root)
-        initAccessPoints();
-
-
     printf("fiz WHOISROOT\n");
 
     // Create TCP Server
@@ -313,9 +311,12 @@ int main(int argc, char const *argv[]) {
             addFd(&fd_sockets, &maxfd, fdDown);
         
         // Adds the file descriptor of the TCP to comm with clients
-        for(int i =0; i < tcpsessions; i++)
-            if(clients.fd[i] != 0)
+        for(int i =0; i < tcpsessions; i++) {
+            if(clients.fd[i] != 0) {
+                printf("clients.fd[%d] %d\n", i, clients.fd[i]);
                 addFd(&fd_sockets, &maxfd, clients.fd[i]);
+            }
+        }
 
         // Time variables
         t1 = NULL;
@@ -342,10 +343,10 @@ int main(int argc, char const *argv[]) {
         }
         else {
         	// Checks if something was written on the standart input
-            if(FD_ISSET(0, &fd_sockets)){
+            if(FD_ISSET(0, &fd_sockets)) {
                 char userInput[BUFFER_SIZE];
                 // Clean the buffers
-		    	memset(userInput,0,sizeof(userInput));
+		    	memset(userInput, 0, sizeof(userInput));
 		        userInput[0] = '\0';
 
 		        // Translates the message to the buffer
@@ -592,8 +593,10 @@ int main(int argc, char const *argv[]) {
                     close(newfd);
                 }
             } 
+            // When receives messages from its clients
             else if(clients.available < tcpsessions){
-                for(int i =0; i < tcpsessions; i++) {
+                for(int i = 0; i < tcpsessions; i++) {
+                    printf("clients.fd[i] %d\n", clients.fd[i]);
                     if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
                         printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
                         int n; 
@@ -646,10 +649,13 @@ int main(int argc, char const *argv[]) {
                                     availsSend = n;
 
                                 if(availsSend != 0){
-                                    // Inputs the new access points
-                                    insertAccessPoint(newPopIp, newPopPort, availsSend);
-                                    for(int j = 0; j < availsSend; j++)
-                                        decrementQueryID(queryIdAux);
+                                    // checks if the AP is already on the list or if the current AP bestpops on the list is smaller than the new receive value
+                                    if(isAPontTheList(newPopIp, newPopPort, availsSend) == 1) {
+                                        // Inputs the new access points
+                                        insertAccessPoint(newPopIp, newPopPort, availsSend);
+                                        for(int j = 0; j < availsSend; j++)
+                                            decrementQueryID(queryIdAux);
+                                    }
                                 }
                             }
                             else{
@@ -677,6 +683,9 @@ int main(int argc, char const *argv[]) {
                     }
                 }
             }
+            else {
+                printf("I received something, but didn't read the message\n");
+            }
  
         }
 
@@ -684,7 +693,3 @@ int main(int argc, char const *argv[]) {
 
 	return 0;
 }
-
-
-
-
