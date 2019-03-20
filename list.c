@@ -15,65 +15,54 @@
 #include "list.h"
 
 
-node *head=NULL, *last=NULL;
+clientList_t *accessPoints;
+queryIDList_t *queryIDList;
 
 
-/*
-    User Defined Functions
-*/
-
-/*void create_linked_list(char val[]){
-
-    insert_at_last(val);
-
-}
-
-
-void insert_at_last(char  _value[]){
-    node *temp_node;
-    temp_node = (node *) malloc(sizeof(node));
-
-    strcpy(temp_node->value,_value);
-    temp_node->next=NULL;
-
-    //For the 1st element
-    if(head==NULL)
-    {
-        head=temp_node;
-        last=temp_node;
-    }
-    else
-    {
-        last->next=temp_node;
-        last=temp_node;
+void insertQueryID(char _queryID[], int _left) {
+    queryIDList_t *temp_node = (queryIDList_t *) malloc(sizeof(queryIDList_t));
+    if(temp_node == NULL) {
+        printf("Error malloc\n");
+        exit(0);
     }
 
+    strcpy(temp_node->queryID, _queryID);
+    temp_node->left = _left;
+
+    temp_node->next = queryIDList;
+    queryIDList = temp_node;
 }
 
-*/
-
-void insert_at_first(char  _value[], int _left){
-    node *temp_node = (node *) malloc(sizeof(node));
-
-    strcpy(temp_node->value, _value);
-    temp_node->next = head;
-    temp_node ->left = _left;
-
-    head = temp_node;
+void decrementQueryID(char _queryID[]) {
+    queryIDList_t *searchNode = queryIDList;
+    
+    // Searchs for the QueryID
+    while(searchNode != NULL)
+    {
+        if(!strcmp(searchNode->queryID, _queryID))
+        {
+            searchNode->left = searchNode->left -1;
+            if(searchNode->left == 0) {
+                deleteQueryID(_queryID);
+                return;
+            }
+        }
+        else
+            searchNode = searchNode->next;
+    }
 }
 
 
-
-void delete_item(char  _value[]){
-    node *myNode = head, *previous=NULL;
+void deleteQueryID(char  _queryID[]) {
+    queryIDList_t *myNode = queryIDList, *previous=NULL;
     int flag = 0;
 
     while(myNode!=NULL)
     {
-        if(!strcmp(myNode->value,_value))
+        if(!strcmp(myNode->queryID,_queryID))
         {
             if(previous==NULL)
-                head = myNode->next;
+                queryIDList = myNode->next;
             else
                 previous->next = myNode->next;
 
@@ -91,54 +80,89 @@ void delete_item(char  _value[]){
         printf("Key not found!\n");
 }
 
+int getLeftQueryID(char _queryID[]) {
+    queryIDList_t *aux = queryIDList;
 
-void decrementItem(char _value[]){
-    node *searchNode = head;
-
-    while(searchNode!=NULL)
-    {
-        if(!strcmp(searchNode->value, _value))
-        {
-            searchNode->left = searchNode->left -1;
-            if(searchNode->left == 0)
-                delete_item(_value);
-                return;
+    while(aux != NULL) {
+        if(!strcmp(aux->queryID, _queryID)) {
+            return aux->left;
         }
-        else
-            searchNode = searchNode->next;
-    }
-
-    
-
-}
-
-int getLeft(char _value[]){
-    node *searchNode = head;
-
-    while(searchNode!=NULL)
-    {
-        if(!strcmp(searchNode->value, _value))
-            return searchNode->left;
-        else
-            searchNode = searchNode->next;
+        aux = aux->next;
     }
     return 0;
-
 }
 
 
-void print_linked_list()
-{
-    printf("\nYour full linked list is\n");
 
-    node *myList;
-    myList = head;
+void insertAccessPoint(char _port[], char _ip[], int _bestpops) {
+    clientList_t *aux = accessPoints;
 
-    while(myList!=NULL)
+     while(aux!=NULL)
     {
-        printf("%s ", myList->value);
-
-        myList = myList->next;
+        if((strcmp(aux->port,_port) == 0) && (strcmp(aux->ip,_ip) == 0)) {
+            aux->bestpops = _bestpops;
+            return;
+        }
+        aux = aux->next;
     }
-    puts("");
+
+    aux = accessPoints;
+
+    clientList_t *new = (clientList_t *) malloc(sizeof(clientList_t));
+    if(new == NULL) {
+        printf("Error malloc\n");
+        exit(0);
+    }
+    new->next = accessPoints;
+    
+    strcpy(new->ip, _ip);
+    strcpy(new->port, _port);
+    new->bestpops = _bestpops;
+
+    accessPoints = new;
 }
+
+/* 
+    returns: 1 when it needs to find more things to populate the list
+             0 success
+             -1 doesnt have an IP
+*/
+int getAccessPoint(char *ip, char *port) {
+    clientList_t *aux1 = accessPoints;
+    clientList_t *aux2 = accessPoints;
+    int numberOfAP = 0;
+
+    if(aux1 != NULL) {
+        numberOfAP = 1;
+        // Finds the last element of the list
+        while(aux1->next != NULL) {
+            aux2 = aux1;
+            aux1 = aux1->next;
+            numberOfAP++;
+        }
+    }
+    else
+        return -1;
+
+    // Sends the information from the last element on the list
+    strcpy(ip, aux1->ip);
+    strcpy(port, aux1->port);
+
+    // Decreases the number of available connections
+    if(aux1->bestpops > 1) {
+        aux1->bestpops--;
+    }
+    else {
+        // There's more than one element on the list -> delete element
+        if(aux1 != aux2) {
+            aux2->next = NULL;
+            free(aux1);
+        }
+    }
+
+    if(numberOfAP <= ERASELIMIT) 
+        return 1;
+    
+    return 0;
+}
+

@@ -37,7 +37,7 @@ clients_t clients;
  clients_t accessPoints;
 
 // Indicatse the number of the Query in 16 bits
-uint queryId = 0;
+uint16_t queryId = 0;
 
 char ipAccessPoint[];
 char portAccessPoint[];

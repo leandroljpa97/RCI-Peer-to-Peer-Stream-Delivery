@@ -129,14 +129,16 @@ int DATA(int _fd, int nbytes, char _data[]) {
 
 /* DISCORVERY OF THE ACCESS POINT */
 
-int POP_QUERY(int _fd, char _queryId[], int _bestPops) {
+int POP_QUERYroot(int _fd, uint16_t _queryId, int _bestPops) {
 	char buffer[PACKAGETCP];
 	char bestPopString[] = "00";
+    char queryIDHex[] = "0000";
 
+    convertNumDoHex(queryIDHex, _queryId);
 
 	// Creates POP_QUERY message
     strcpy(buffer, "PQ ");
-    strcat(buffer, _queryId);
+    strcat(buffer, queryIDHex);
     strcat(buffer, " ");
     sprintf(bestPopString, "%d", _bestPops);
     strcat(buffer, bestPopString);
@@ -155,15 +157,34 @@ int POP_QUERY(int _fd, char _queryId[], int _bestPops) {
     return 1;
 }
 
+int POP_QUERYclients(int _fd, char _queryId[], int _bestPops) {
+    char buffer[PACKAGETCP];
+    char bestPopString[] = "00";
+
+    // Creates POP_QUERY message
+    strcpy(buffer, "PQ ");
+    strcat(buffer, _queryId);
+    strcat(buffer, " ");
+    sprintf(bestPopString, "%d", _bestPops);
+    strcat(buffer, bestPopString);
+    strcat(buffer, "\n");
+    printf("o buffer no whoIsRoot é %s\n", buffer);
+
+    // finds the size of the POP_QUERY message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+        printf("Fail sending POP_QUERY to fd %d\n", _fd);
+        return 0;
+    }
+
+    return 1;
+}
+
 int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avails) {
 	char buffer[PACKAGETCP];
 	char availsString[] = "00";
-
-	// Converts queryID to hex format
-
-	/*char queryIDHex[] = "HEX_STYLE";
-	sprintf(queryIDHex, "%hu",  (char*) _queryID);
-	printf("%s in Hexadecimal= %s", _queryID, queryIDHex); */
 
 	// Creates POP_REPLY message
     strcpy(buffer, "PR ");

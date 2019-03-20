@@ -62,10 +62,10 @@ extern char portAccessPoint[PORT_SIZE];
 extern clients_t clients;
 
 // in the case to be accessPoints, fd is to indicate if this position is available to newAccessPoint or not available
-extern clients_t accessPoints;
+//extern clients_t accessPoints;
 
 // Indicatse the number of the Query in 16 bits
-extern uint queryId ;
+extern uint16_t queryId ;
 
 
 void ctrl_c_callback_handler(int signum);

@@ -28,7 +28,6 @@ COMMENTS
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #define PACKAGE_UDP 128
 #define PACKAGE_TCP 128
@@ -37,14 +36,14 @@ COMMENTS
 
 //--------------------------------- ACCESS SERVER -----------------------------------------------------------
 
-
+/*
 
 void  sendRandomAccessPoint(){
     int i;
-    time_t t;
+    //time_t t;
    
-    /* Intializes random number generator */
-    srand((unsigned) time(&t));
+    // Intializes random number generator 
+    //srand((unsigned) time(&t));
 
     while(1){
         i =  rand() % bestpops;
@@ -123,7 +122,7 @@ void insertAccessPoint(char _ip[], char _port[]){
     int j;
     time_t t;
    
-    /* Intializes random number generator */
+    // Intializes random number generator 
     srand((unsigned) time(&t));
     j =  rand() % bestpops;
 
@@ -161,7 +160,7 @@ void insertAccessP_ifFree(char _newPopIp[], char _newPopPort[]){
 
 }
 
-
+*/
 
 
 //-----------------------------------------------------------------------------------------
@@ -368,15 +367,24 @@ int main(int argc, char const *argv[]) {
                 receiveUdp(fdAccessServer, bufferAccessServer, BUFFER_SIZE, &addr);
 
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
-                    // If root has available connection, allow connection to itself
                     printf("RECEIVED A POPREQ\n");
+                    // If root has available connection, allow connection to itself
                     if(clients.available > 0) {
                         // Sends POPRESP with IP and Port to connect to itself
                         POPRESP(fdAccessServer, &addr, ipaddr, tport);
                     }
                     else {
-                        findAccessPoint();
-                        POPRESP(fdAccessServer, &addr, ipAccessPoint, portAccessPoint);
+                        int findAP; 
+                        // Gets an IP and Port from the list of AP and responds to the client
+                        if((findAP = getAccessPoint(availableIAmRootIP, availableIAmRootPort)) != -1)
+                            POPRESP(fdAccessServer, &addr, ipAccessPoint, portAccessPoint);
+
+                        // Needs to find new AP to the list
+                        if(findAP == 1) {
+                            queryId++;
+                            for(int i = 0; i < tcpsessions; i++)
+                                POP_QUERYroot(clients.fd[i], queryId, bestpops);
+                        }
                     }
                 }
             }
@@ -430,8 +438,7 @@ int main(int argc, char const *argv[]) {
                                 printf("Dad left\n");
                                 // Chamar WHOISROOT
                             }
-                            printf("sizeStream - size recebido: %d\n", n);
-
+                            
                             // Reads the content of the DATA package
                             n = readTcp(fdUp, bufferUp);
                             if(n == -1)  {
@@ -485,10 +492,8 @@ int main(int argc, char const *argv[]) {
                             idStream[0] = '\0';
 
                         }
-
                         else if(!strcmp(action,"PQ ")){
                             n = readTcpNBytes(fdUp, queryIdAux, TCP_MESSAGE_SIZE);
-
                             if(n == -1)  {
                                 printf("Dad left\n");
                                 // Chamar WHOISROOT
@@ -500,23 +505,22 @@ int main(int argc, char const *argv[]) {
                                 // Chamar WHOISROOT
                             }
 
-                            if(clients.available > 0){
-
-                                POP_REPLY(fdUp, queryIdAux, ipaddr, tport, clients.available);
-
+                            if(clients.available > 0) {
+                                // If the iam has available tcp but not enough to cover the request.
                                 if(atoi(bestpopsAux) > clients.available){
-
+                                    POP_REPLY(fdUp, queryIdAux, ipaddr, tport, clients.available);
+                                    // Run the list of clients to send the message to search for more bestpops left
                                     for(int j = 0; j < tcpsessions; j++){
                                         if(clients.fd[j] != 0)
-                                            POP_QUERY(clients.fd[j],queryIdAux, atoi(bestpopsAux) - clients.available);
+                                            POP_QUERYclients(clients.fd[j], queryIdAux, atoi(bestpopsAux) - clients.available);
                                     }
+                                    // Insert the pending request bestpops
+                                    insertQueryID(queryIdAux, atoi(bestpopsAux) - clients.available);
                                 }
-                                insert_at_first(queryIdAux, atoi(bestpopsAux) - clients.available);
-
+                                else {
+                                    POP_REPLY(fdUp, queryIdAux, ipaddr, tport, atoi(bestpopsAux));
+                                }
                             }
-
-
-
                         }
 
                         action[0] = '\0';
@@ -527,7 +531,7 @@ int main(int argc, char const *argv[]) {
                     // if checkReadUp = 1 concatennate bufferUp to received stream
                     else{
                         printf("o checkReadUp tá a 1 \n");
-                        n = readTcp(fdUp, bufferUp);
+                        int n = readTcp(fdUp, bufferUp);
                         if(n == -1) {
                             printf("Dad left\n");
                             // Chamar WHOISROOT
@@ -566,13 +570,11 @@ int main(int argc, char const *argv[]) {
                 struct sockaddr addr_tcpServer;
                 unsigned int addrlenTcpServer = sizeof(struct sockaddr);
 
+                if((newfd = accept(fdDown, (struct sockaddr *) &addr_tcpServer, &addrlenTcpServer)) == -1) {
+                    printf("Error while accepting new client\n");
+                    exit(1);
+                }
                 if(clients.available > 0){
-
-                    if((newfd = accept(fdDown, (struct sockaddr *) &addr_tcpServer, &addrlenTcpServer)) == -1) {
-                        printf("Error while accepting new client\n");
-                        exit(1);
-                    }
-                    
                     if(insertFdClient(newfd, &clients)) {
                         // Sends the welcome message to the new client
                         if(!WELCOME(newfd)) {
@@ -582,11 +584,12 @@ int main(int argc, char const *argv[]) {
                     }
                     else{
                         writeTcp(fdUp,"RE",strlen("RE"));
-
+                        close(newfd);
                     }
                 }
                 else {
                     writeTcp(fdUp,"RE",strlen("RE"));
+                    close(newfd);
                 }
             } 
             else if(clients.available < tcpsessions){
@@ -601,43 +604,57 @@ int main(int argc, char const *argv[]) {
                             // Chamar WHOISROOT
                         }
                         printf("actionChild: %s\n", actionChild);
-
+                        // Receives a NEW_POP
                         if(strcmp(actionChild, "NP ") == 0) {
                             // Reads the amount of bytes that will receive in 4 hex digits
                             n = readTcp(clients.fd[i],bufferDown);
                             if(n == -1){
                                 printf("Child left\n");
-                                // Chamar WHOISROOT
                             }
 
                             n = sscanf(bufferDown,"%[^:]:%[^\n]\n",newPopIp, newPopPort);
-                        
+                            
+                            // Adds the new client to the list of clients
                             addClient(clients.fd[i], newPopIp, newPopPort);
 
+                            // When its root, adds the new client to the list of AP - since it doesn't know how many tcpsessions it has, insert has 1 (default)
                             if(root)
-                                insertAccessP_ifFree(newPopIp, newPopPort);
+                                insertAccessPoint(newPopIp, newPopPort, 1);
 
                             printf(" clients.ip[i]:%s\n", clients.ip[i]);
                             printf(" clients.port[i]:%s\n", clients.port[i]);
-
                         }
 
+                        // Receives a POP-REPLY
                         else if(!strcmp(actionChild,"PR ")){
                             int availsSend;
                             n = readTcp(clients.fd[i], bufferDown);
                             if(n == -1){
                                 printf("Child left\n");
-                                // Chamar WHOISROOT
                             }
 
                             n = sscanf(bufferDown,"%[^ ] %[^:]:%[^ ] %[^\n]\n",queryIdAux , newPopIp, newPopPort, avails);
 
-                            if(root)
-                                insertAccessPoint(newPopIp, newPopPort);
+                            // When it's root, insert the number of tcp sessions that the iamroot is able to have
+                            if(root){
+                                // Finds how many bestpops are still to find to that queryID
+                                n = getLeftQueryID(queryIdAux);
+                                // if the client has more tcp sessions than its needed - inputs only the necessary ones
+                                if(atoi(avails) <= n)
+                                    availsSend = atoi(avails);
+                                else 
+                                    availsSend = n;
 
+                                if(availsSend != 0){
+                                    // Inputs the new access points
+                                    insertAccessPoint(newPopIp, newPopPort, availsSend);
+                                    for(int j = 0; j < availsSend; j++)
+                                        decrementQueryID(queryIdAux);
+                                }
+                            }
                             else{
-
-                                n = getLeft(queryIdAux);
+                                // Finds how many bestpops are still to find to that queryID
+                                n = getLeftQueryID(queryIdAux);
                                 if(atoi(avails) <= n)
                                     availsSend = atoi(avails);
                                 else 
@@ -645,15 +662,11 @@ int main(int argc, char const *argv[]) {
 
                                 if(availsSend != 0){
                                     POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend);
-                                    for(int j = 0; j < availsSend;j++)
-                                        decrementItem(queryIdAux);
+                                    for(int j = 0; j < availsSend; j++)
+                                        decrementQueryID(queryIdAux);
                                 }
-
-                                
                             }
-                          
                         }
-
 
                         bufferDown[0] = '\0';
                         actionChild[0] = '\0';
