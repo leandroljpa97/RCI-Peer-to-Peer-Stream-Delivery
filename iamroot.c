@@ -313,7 +313,6 @@ int main(int argc, char const *argv[]) {
         // Adds the file descriptor of the TCP to comm with clients
         for(int i =0; i < tcpsessions; i++) {
             if(clients.fd[i] != 0) {
-                printf("clients.fd[%d] %d\n", i, clients.fd[i]);
                 addFd(&fd_sockets, &maxfd, clients.fd[i]);
             }
         }
@@ -576,10 +575,10 @@ int main(int argc, char const *argv[]) {
                     exit(1);
                 }
                 if(clients.available > 0){
-                    if(insertFdClient(newfd, &clients)) {
+                    if(insertFdClient(newfd)) {
                         // Sends the welcome message to the new client
                         if(!WELCOME(newfd)) {
-                            deleteFdClient(newfd, &clients);
+                            deleteFdClient(newfd);
                         }
                         printf("mandei um welcome \n");
                     }
@@ -596,7 +595,7 @@ int main(int argc, char const *argv[]) {
             // When receives messages from its clients
             else if(clients.available < tcpsessions){
                 for(int i = 0; i < tcpsessions; i++) {
-                    printf("clients.fd[i] %d\n", clients.fd[i]);
+                    printf("clients.fd[%d] %d\n", i, clients.fd[i]);
                     if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
                         printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
                         int n; 
@@ -604,19 +603,18 @@ int main(int argc, char const *argv[]) {
                         n = readTcpNBytes(clients.fd[i], actionChild, TCP_MESSAGE_TYPE);
                         if(n == -1)  {
                             printf("Child left\n");
-                            // Chamar WHOISROOT
                         }
                         printf("actionChild: %s\n", actionChild);
                         // Receives a NEW_POP
                         if(strcmp(actionChild, "NP ") == 0) {
                             // Reads the amount of bytes that will receive in 4 hex digits
-                            n = readTcp(clients.fd[i],bufferDown);
+                            n = readTcp(clients.fd[i], bufferDown);
                             if(n == -1){
                                 printf("Child left\n");
                             }
 
                             n = sscanf(bufferDown,"%[^:]:%[^\n]\n",newPopIp, newPopPort);
-                            
+
                             // Adds the new client to the list of clients
                             addClient(clients.fd[i], newPopIp, newPopPort);
 

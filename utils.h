@@ -37,8 +37,6 @@ typedef struct _clients {
 	char **port;
 } clients_t;
 
-
-
 extern char streamId[];
 extern char streamIp[];
 extern char streamName[];
@@ -77,10 +75,13 @@ void error_confirmation(char*s);
 
 void initClientStructure();
 
-
 void addClient(int _fd, char _ip[], char _port[]);
 
 void deleteClient(int _fd);
+
+int insertFdClient(int _newfd);
+
+int deleteFdClient(int _delfd); 
 
 void closeClient(int _fd);
 
@@ -95,10 +96,6 @@ void convertNumDoHex(char *nbytesHex, int num);
 void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd);
 
 void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd);
-
-int insertFdClient(int _newfd, clients_t *_clients);
-
-int deleteFdClient(int _delfd, clients_t *_clients);
 
 int checkPort(int _port);
 

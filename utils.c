@@ -83,14 +83,12 @@ void initClientStructure(){
 void addClient(int _fd, char _ip[], char _port[]) {
     int i;
     for (i = 0; i < tcpsessions; ++i) {
-        if(clients.fd[i] == 0) {
-            clients.fd[i] = _fd;
+        if(clients.fd[i] == _fd) {
             break;
         }
     }
     strcpy(clients.ip[i], _ip);
     strcpy(clients.port[i], _port);
-    clients.available--;
 }
 
 void deleteClient(int _fd) {
@@ -98,29 +96,29 @@ void deleteClient(int _fd) {
     for (i = 0; i < tcpsessions; ++i) {
         if(clients.fd[i] == _fd) {
             clients.fd[i] = 0;
+            clients.available++;
             break;
         }
     }
     memset(clients.ip[i], '\0', IP_SIZE);
-    strcpy(clients.port[i],'\0', PORT_SIZE);
-    clients.available++;
+    memset(clients.port[i],'\0', PORT_SIZE);
 }
-int insertFdClient(int _newfd, clients_t *_clients) {
+int insertFdClient(int _newfd) {
     for(int i = 0; i < tcpsessions; i++){
-        if(_clients->fd[i] == 0){
-            _clients->fd[i] = _newfd;
-            _clients->available--;
+        if(clients.fd[i] == 0){
+            clients.fd[i] = _newfd;
+            clients.available--;
             return 1;
         }
     }
     return 0;
 }
 
-int deleteFdClient(int _delfd, clients_t *_clients) {
+int deleteFdClient(int _delfd) {
     for(int i = 0; i < tcpsessions; i++){
-        if(_clients->fd[i] == _delfd){
-            _clients->fd[i] = 0;
-            _clients->available++;
+        if(clients.fd[i] == _delfd){
+            clients.fd[i] = 0;
+            clients.available++;
             return 1;
         }
     }

@@ -38,7 +38,7 @@ void deleteQueryID(char  _queryID[]);
 
 int isAPontTheList(char _port[], char _ip[], int _bestpops);
 
-void insertAccessPoint(char _port[], char _ip[], int _bestpops);
+void insertAccessPoint(char _ip[], char  _port[], int _bestpops) ;
 
 void deleteClientAP(clientList_t  *removeIP);
 

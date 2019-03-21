@@ -118,7 +118,7 @@ int isAPontTheList(char _port[], char _ip[], int _bestpops) {
     return 1;
 }
 
-void insertAccessPoint(char _port[], char _ip[], int _bestpops) {
+void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
     clientList_t *aux = accessPoints;
 
     // Se ja estiver na lista, atualiza o seu valor
@@ -133,16 +133,18 @@ void insertAccessPoint(char _port[], char _ip[], int _bestpops) {
         }
         aux = aux->next;
     }
+
     // Caso não esteja na lista
     aux = accessPoints;
-
+    // Creates a new client structre
     clientList_t *new = (clientList_t *) malloc(sizeof(clientList_t));
     if(new == NULL) {
         printf("Error malloc\n");
         exit(0);
     }
+
+    // Populate the structure
     new->next = accessPoints;
-    
     strcpy(new->ip, _ip);
     strcpy(new->port, _port);
     new->bestpops = _bestpops;
@@ -151,6 +153,7 @@ void insertAccessPoint(char _port[], char _ip[], int _bestpops) {
     if(numberOfAP == 0) {
         currentClientAP = new;
     }
+    
     accessPoints = new;
     
     // Increases the number of AP on the list
