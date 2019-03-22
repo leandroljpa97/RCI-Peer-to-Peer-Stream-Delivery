@@ -166,16 +166,19 @@ void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
         while(aux!=NULL) {
             // if there's a negative AP
             if(aux->negative > 0) {
-                if(currentClientAP == aux) {
-                     // Goes to the next client on the list
-                    if(currentClientAP->next != NULL)
-                        currentClientAP = currentClientAP->next;
-                    else
-                        currentClientAP = accessPoints;
+                aux->bestpops -= aux->negative;
+                numberOfAP -= aux->negative;    
+                if(aux->bestpops <= 0) {
+                    if(currentClientAP == aux) {
+                         // Goes to the next client on the list
+                        if(currentClientAP->next != NULL)
+                            currentClientAP = currentClientAP->next;
+                        else
+                            currentClientAP = accessPoints;
+                    }
+                    // Deletes the client and reduces the number of AP's
+                    deleteClientAP(aux);
                 }
-                // Deletes the client and reduces the number of AP's
-                deleteClientAP(aux);
-                numberOfAP--;
                 return;
             }
             aux = aux->next;
@@ -220,6 +223,14 @@ int getAccessPoint(char *ip, char *port) {
     strcpy(ip, currentClientAP->ip);
     strcpy(port, currentClientAP->port);
 
+    clientList_t *aux = currentClientAP;
+    // Goes to the next client on the list
+    
+    if(currentClientAP->next != NULL)
+        currentClientAP = currentClientAP->next;
+    else
+        currentClientAP = accessPoints;
+
     // When there's more AP than bestpops, decreses the number of bestpops of that AP or remove it from the list if there's no more positions
     if(numberOfAP > bestpops) {
         // Decreases the number of available connections for that AP
@@ -227,8 +238,6 @@ int getAccessPoint(char *ip, char *port) {
             currentClientAP->bestpops--;
         }
         else {
-            clientList_t *aux = currentClientAP;
-            
             deleteClientAP(aux);
         }
         numberOfAP--;
@@ -238,12 +247,6 @@ int getAccessPoint(char *ip, char *port) {
         currentClientAP->negative++;
     }
 
-    // Goes to the next client on the list
-    if(currentClientAP->next != NULL)
-        currentClientAP = currentClientAP->next;
-    else
-        currentClientAP = accessPoints;
-    
     // When there's only bestpops AP on the list, sends the information to do POP_QUERY
     if(numberOfAP <= bestpops)
         return 1;
