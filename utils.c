@@ -73,9 +73,11 @@ void initClientStructure(){
     clients.fd = (int *) calloc(tcpsessions, sizeof(int));
     clients.ip = (char **) calloc(tcpsessions, sizeof(char *));
     clients.port = (char **) calloc(tcpsessions, sizeof(char *));
+    clients.buffer = (char **) calloc(tcpsessions, sizeof(char *));
     for (int i = 0; i < tcpsessions; ++i) {
         clients.ip[i] = (char *) calloc(IP_SIZE, sizeof(char));
         clients.port[i] = (char *) calloc(PORT_SIZE, sizeof(char));
+        clients.buffer[i] = (char *) calloc(PACKAGETCP, sizeof(char));
     }
 
 }
@@ -89,20 +91,9 @@ void addClient(int _fd, char _ip[], char _port[]) {
     }
     strcpy(clients.ip[i], _ip);
     strcpy(clients.port[i], _port);
+    memset(clients.buffer[i], '\0', PACKAGETCP);
 }
 
-void deleteClient(int _fd) {
-    int i;
-    for (i = 0; i < tcpsessions; ++i) {
-        if(clients.fd[i] == _fd) {
-            clients.fd[i] = 0;
-            clients.available++;
-            break;
-        }
-    }
-    memset(clients.ip[i], '\0', IP_SIZE);
-    memset(clients.port[i],'\0', PORT_SIZE);
-}
 int insertFdClient(int _newfd) {
     for(int i = 0; i < tcpsessions; i++){
         if(clients.fd[i] == 0){
@@ -129,20 +120,21 @@ void closeClient(int _fd) {
     int i;
     for (i = 0; i < tcpsessions; ++i) {
         if(clients.fd[i] == _fd) {
+            close(_fd);
             clients.fd[i] = 0;
+            clients.available++;
             break;
         }
     }
-    clients.ip[i] = '\0';
-    clients.port[i] = '\0';
-    clients.available++;
-    close(_fd);
+    memset(clients.ip[i], '\0', IP_SIZE);
+    memset(clients.port[i],'\0', PORT_SIZE);
+    memset(clients.buffer[i], '\0', PACKAGETCP);
 }
 
 void closeAllClients() {
     for (int i = 0; i < tcpsessions; ++i) {
         if(clients.fd[i] != 0)
-            close(clients.fd[i]);
+            closeClient(clients.fd[i]);
     }
 }
 
@@ -151,9 +143,11 @@ void clearClientStructure() {
     for (int i = 0; i < tcpsessions; ++i) {
         free(clients.ip[i]);
         free(clients.port[i]);
+        free(clients.buffer[i]);
     }
     free(clients.ip);
     free(clients.port);
+    free(clients.buffer);
 }
 
 void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd) {
@@ -344,4 +338,12 @@ void setTimeOut(struct timeval*_t1, struct timeval *_t2) {
 }
 
 
+
+int findsNewLine(char *buffer, int size) {
+    for (int i = 0; i < size; ++i) {
+        if(buffer[i] == '\0')
+            return i;
+    }
+    return -1;
+}
 

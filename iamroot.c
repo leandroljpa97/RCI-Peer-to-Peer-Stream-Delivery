@@ -117,17 +117,12 @@ int main(int argc, char const *argv[]) {
     // Return state of the select
     int counter= 0;
 
-    // Indicates how many bytes are already read from previous attemps
-    int nAlreadyReceived = 0;
-
     // receive information from dad
     char bufferUp[PACKAGETCP];
+    memset(bufferUp, '\0', PACKAGETCP);
 
-    char bufferDown[BUFFER_SIZE];
-    char action[BUFFER_SIZE];
     char sizeStream[BUFFER_SIZE];
     char idStream[BUFFER_SIZE];
-    char actionChild[BUFFER_SIZE];
     char newPopPort[BUFFER_SIZE];
     char newPopIp[BUFFER_SIZE];
     char queryIdAux[BUFFER_SIZE];
@@ -136,11 +131,6 @@ int main(int argc, char const *argv[]) {
 
     // Resets the number of AP availables on the list
     numberOfAP = 0;
-
-
-    // flag that is 1 if we didn't read everything 
-    int checkReadUp = 0;
-
 
 	// Read Input Arguments of the program and set the default variables
     int dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIp, streamPort, ipaddr, tport, 
@@ -289,145 +279,134 @@ int main(int argc, char const *argv[]) {
                 else if(!root){
                     printf("i received from my dad \n");
 
-                    int n;
+                    // Reads the message from its dad
+                    int n = readTcp(fdUp, bufferUp);
+                    if(n <= 0)  {
+                        printf("Dad left\n");
+                        // Chamar WHOISROOT
+                    }
 
-                    // if flag is 0 we have to do everything normal - read DA or WE 
-                    if(!checkReadUp) {
-                        printf("o checkReadUp tá a 0 \n");
-                        n = readTcpNBytes(fdUp, action, TCP_MESSAGE_TYPE);
-                        if(n == -1)  {
-                            printf("Dad left\n");
-                            // Chamar WHOISROOT
-                        }
-                        printf("action: %s\n", action);
+                    printf("bufferUp %s\n", bufferUp);
 
-                        if(strcmp(action, "DA ") == 0) {
-                            // Reads the amount of bytes that will receive in 4 hex digits
-                            n = readTcpNBytes(fdUp, sizeStream, TCP_MESSAGE_SIZE);
-                            if(n == -1)  {
-                                printf("Dad left\n");
-                                // Chamar WHOISROOT
-                            }
-                            
-                            // Reads the content of the DATA package
-                            n = readTcp(fdUp, bufferUp);
-                            if(n == -1)  {
-                                printf("Dad left\n");
-                                // Chamar WHOISROOT
-                            }
-                            printf("bufferUp - size recebido: %dvs%d \n", n, (int) strtol(sizeStream, NULL, 16));
-                            printf("bufferUp %s\n", bufferUp);
+                    int newAction = 1;
+                    while(newAction == 1) {
+                        printf("action: %c%c\n", bufferUp[0], bufferUp[1]);
 
-                            // Converts the sizeStreamOrId to decimal number, if the number 
-                            //of bytes read is not the same that is indicate, we need to read again from the source
-                            if(n != (int) strtol(sizeStream, NULL, 16)) {
-                                checkReadUp = 1;
-                                nAlreadyReceived = n;
-                            }
-                            else {
+                        if(bufferUp[0] == 'D' && bufferUp[1] == 'A') {
+                            printf("I received DATA\n");       
+                            // Copies the amount of bytes that will receive in 4 hex digits
+                            strncpy(sizeStream, &bufferUp[3], TCP_MESSAGE_SIZE);
+
+                            // Checks if it received the complete DA message
+                            if((int) strtol(sizeStream, NULL, 16) + 8 <= n) {
                                 // Retransmit data to its clients
-                                for (int i = 0; i < tcpsessions; ++i){
+                                for (int i = 0; i < tcpsessions; ++i) {
                                     if(clients.fd[i] != 0) {
-                                        if(DATA(clients.fd[i], n, bufferUp) == 0) {
+                                        if(DATA(clients.fd[i], (int) strtol(sizeStream, NULL, 16), &bufferUp[8]) == 0) {
                                             closeClient(clients.fd[i]);
                                             printf("Child gone\n");
                                         }
                                     }
                                 }
-                                // Inputs the string terminator
-                                bufferUp[0]= '\0';
-                                idStream[0]= '\0';
-                                sizeStream[0]= '\0';
-                                nAlreadyReceived = 0;
-                            }
-                        }
-                        else if(strcmp(action, "WE ") == 0) {
-                            printf("I received a WELCOME\n");
+                                // Checks if more messages are on the buffer
+                                if(((int) strtol(sizeStream, NULL, 16) + 9 < PACKAGE_TCP) && (bufferUp[(int) strtol(sizeStream, NULL, 16) + 9] != '\0')) {
+                                    // Copies the buffer to the beggining
+                                    strcpy(bufferUp, &bufferUp[(int) strtol(sizeStream, NULL, 16) + 9]);
 
-                            n = readTcp(fdUp, idStream);
-                            if(n == -1)  {
-                                printf("Dad left\n");
-                                // Chamar WHOISROOT
-                            }
-                            idStream[n-1] = '\0';
-                            printf("idStream %s\n", idStream);
-
-
-                            //in this case sizeId received is sizeStream
-                            if(strcmp(idStream, streamId) >= 0) {
-                                NEW_POP(fdUp);
-                            }
-                            
-                            bufferUp[0]= '\0';
-                            idStream[0] = '\0';
-
-                        }
-                        else if(!strcmp(action,"PQ ")){
-                            n = readTcpNBytes(fdUp, queryIdAux, TCP_MESSAGE_SIZE);
-                            if(n == -1)  {
-                                printf("Dad left\n");
-                                // Chamar WHOISROOT
-                            }
-                            n = readTcp(fdUp,bestpopsAux);
-
-                            if(n == -1)  {
-                                printf("Dad left\n");
-                                // Chamar WHOISROOT
-                            }
-
-                            if(clients.available > 0) {
-                                // If the iam has available tcp but not enough to cover the request.
-                                if(atoi(bestpopsAux) > clients.available){
-                                    POP_REPLY(fdUp, queryIdAux, ipaddr, tport, clients.available);
-                                    // Run the list of clients to send the message to search for more bestpops left
-                                    for(int j = 0; j < tcpsessions; j++){
-                                        if(clients.fd[j] != 0)
-                                            POP_QUERYclients(clients.fd[j], queryIdAux, atoi(bestpopsAux) - clients.available);
-                                    }
-                                    // Insert the pending request bestpops
-                                    insertQueryID(queryIdAux, atoi(bestpopsAux) - clients.available);
+                                    // Indicates that the size received is the one received minus the messaged that is already processed
+                                    n -= (int) strtol(sizeStream, NULL, 16) + 8;
                                 }
                                 else {
-                                    POP_REPLY(fdUp, queryIdAux, ipaddr, tport, atoi(bestpopsAux));
-                                }
+                                    // Clears the bufferUp string, since it's jobs is done
+                                    memset(bufferUp, '\0', PACKAGE_TCP);
+                                    newAction = 0;
+                                } 
+
+                                // Clears the size stream since DATA is done
+                                memset(sizeStream, '\0', BUFFER_SIZE);
+                            }
+                            // The data is not complete                            
+                            else {
+                                newAction = 0;
                             }
                         }
+                        else if(bufferUp[0] == 'W' && bufferUp[1] == 'E') {
+                            printf("I received a WELCOME\n");
+                            int newLine = 0;
+                            // Found a complete message
+                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0){
+                                sscanf(&bufferUp[3], "%[^\n]\n", idStream);
 
-                        action[0] = '\0';
-                        sizeStream[0] = '\0';
-                        bestpopsAux[0] = '\0';
-                        queryIdAux[0] = '\0';
-                    }
-                    // if checkReadUp = 1 concatennate bufferUp to received stream
-                    else{
-                        printf("o checkReadUp tá a 1 \n");
-                        int n = readTcp(fdUp, bufferUp);
-                        if(n == -1) {
-                            printf("Dad left\n");
-                            // Chamar WHOISROOT
+                                //in this case sizeId received is sizeStream
+                                if(strcmp(idStream, streamId) >= 0) {
+                                    NEW_POP(fdUp);
+                                }
+                                // Clears the idStram string, since it's jobs is done
+                                memset(idStream, '\0', PACKAGE_TCP);
+
+                                // checks if there is another message
+                                if(bufferUp[newLine + 1] != '\0') {
+                                    // Copies the buffer to the beggining
+                                    strcpy(bufferUp, &bufferUp[newLine + 1]);
+                                }
+                                // There's no more messages
+                                else {
+                                    newAction = 0;
+                                    memset(bufferUp, '\0', PACKAGE_TCP);
+                                }
+                            }
+                            // The data is not complete
+                            else {
+                                newAction = 0;
+                            }
                         }
+                        else if(bufferUp[0] == 'P' && bufferUp[1] == 'Q'){
+                            printf("I received a POP_QUERYclients\n");
+                            int newLine = 0;
+                            // Found a complete message
+                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                // checks if both informations are contained there
+                                if(sscanf(&bufferUp[3], "%[^ ] %[^\n]\n", queryIdAux, bestpopsAux) == 2) {
+                                    printf("queryIdAux: %s\nbestpopsAux: %s\n", queryIdAux, bestpopsAux);
 
-                        printf("bufferUp %s\n", bufferUp);
-
-                        if((nAlreadyReceived + n) !=  (int) strtol(sizeStream, NULL, 16)) {
-                            checkReadUp = 1;
-                            nAlreadyReceived += n;
-                        }
-                        else {
-                            // Retransmit data to its clients
-                            for (int i = 0; i < tcpsessions; ++i){
-                                if(clients.fd[i] != 0) {
-                                    if(DATA(clients.fd[i], nAlreadyReceived + n, bufferUp) == 0) {
-                                        closeClient(clients.fd[i]);
-                                        printf("Child gone\n");
+                                    // Proccess the POP_QUERY
+                                    if(clients.available > 0) {
+                                        // If the iam has available tcp but not enough to cover the request.
+                                        if(atoi(bestpopsAux) > clients.available){
+                                            POP_REPLY(fdUp, queryIdAux, ipaddr, tport, clients.available);
+                                            // Run the list of clients to send the message to search for more bestpops left
+                                            for(int j = 0; j < tcpsessions; j++){
+                                                if(clients.fd[j] != 0)
+                                                    POP_QUERYclients(clients.fd[j], queryIdAux, atoi(bestpopsAux) - clients.available);
+                                            }
+                                            // Insert the pending request bestpops
+                                            insertQueryID(queryIdAux, atoi(bestpopsAux) - clients.available);
+                                        }
+                                        else {
+                                            POP_REPLY(fdUp, queryIdAux, ipaddr, tport, atoi(bestpopsAux));
+                                        }
                                     }
+                                    // Clears the idStram string, since it's jobs is done
+                                    memset(queryIdAux, '\0', BUFFER_SIZE);
+                                    memset(bestpopsAux, '\0', BUFFER_SIZE);
+                                }
+
+                                // checks if there is another message
+                                if(bufferUp[newLine + 1] != '\0') {
+                                    // Copies the buffer to the beggining
+                                    strcpy(bufferUp, &bufferUp[newLine + 1]);
+                                }
+                                // There's no more messages
+                                else {
+                                    newAction = 0;
+                                    memset(bufferUp, '\0', PACKAGE_TCP);
                                 }
                             }
-                            nAlreadyReceived = 0;
-                            checkReadUp = 0;
-                            sizeStream[0] = '\0';
+                            // The data is not complete
+                            else {
+                                newAction = 0;
+                            }
                         }
-
                     }
                 }                
             }
@@ -468,86 +447,124 @@ int main(int argc, char const *argv[]) {
                     printf("clients.fd[%d] %d\n", i, clients.fd[i]);
                     if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
                         printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
-                        int n; 
-
-                        n = readTcpNBytes(clients.fd[i], actionChild, TCP_MESSAGE_TYPE);
+                        int n = readTcp(clients.fd[i], clients.buffer[i]);
                         if(n == -1)  {
                             printf("Child left\n");
                         }
-                        printf("actionChild: %s\n", actionChild);
-                        // Receives a NEW_POP
-                        if(strcmp(actionChild, "NP ") == 0) {
-                            // Reads the amount of bytes that will receive in 4 hex digits
-                            n = readTcp(clients.fd[i], bufferDown);
-                            if(n == -1){
-                                printf("Child left\n");
-                            }
 
-                            n = sscanf(bufferDown,"%[^:]:%[^\n]\n",newPopIp, newPopPort);
+                        printf("clients.buffer[%d]: %s\n", i, clients.buffer[i]);
 
-                            // Adds the new client to the list of clients
-                            addClient(clients.fd[i], newPopIp, newPopPort);
+                        int newAction = 1;
+                        while(newAction == 1) {
 
-                            // When its root, adds the new client to the list of AP - since it doesn't know how many tcpsessions it has, insert has 1 (default)
-                            if(root)
-                                insertAccessPoint(newPopIp, newPopPort, 1);
+                            // Receives a NEW_POP
+                            if(clients.buffer[i][0] == 'N' && clients.buffer[i][0] == 'P') {
+                                printf("Received a NEW_POP\n");
 
-                            printf(" clients.ip[i]:%s\n", clients.ip[i]);
-                            printf(" clients.port[i]:%s\n", clients.port[i]);
-                        }
+                                int newLine = 0;
+                                // Found a complete message
+                                if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
+                                    // checks if both informations are contained there
+                                    if(sscanf(&clients.buffer[i][3], "%[^:]:%[^\n]\n",newPopIp, newPopPort) == 2) {
+                                        printf("newPopIp: %s\newPopPort: %s\n", newPopIp, newPopPort);
 
-                        // Receives a POP-REPLY
-                        else if(!strcmp(actionChild,"PR ")){
-                            int availsSend;
-                            n = readTcp(clients.fd[i], bufferDown);
-                            if(n == -1){
-                                printf("Child left\n");
-                            }
+                                        // Adds the new client to the list of clients
+                                        addClient(clients.fd[i], newPopIp, newPopPort);
 
-                            n = sscanf(bufferDown,"%[^ ] %[^:]:%[^ ] %[^\n]\n",queryIdAux , newPopIp, newPopPort, avails);
+                                        // When its root, adds the new client to the list of AP - since it doesn't know how many tcpsessions it has, insert has 1 (default)
+                                        if(root)
+                                            insertAccessPoint(newPopIp, newPopPort, 1);
 
-                            // When it's root, insert the number of tcp sessions that the iamroot is able to have
-                            if(root){
-                                // Finds how many bestpops are still to find to that queryID
-                                n = getLeftQueryID(queryIdAux);
-                                // if the client has more tcp sessions than its needed - inputs only the necessary ones
-                                if(atoi(avails) <= n)
-                                    availsSend = atoi(avails);
-                                else 
-                                    availsSend = n;
+                                        printf(" clients.ip[i]:%s\n", clients.ip[i]);
+                                        printf(" clients.port[i]:%s\n", clients.port[i]);
 
-                                if(availsSend != 0){
-                                    // checks if the AP is already on the list or if the current AP bestpops on the list is smaller than the new receive value
-                                    if(isAPontTheList(newPopIp, newPopPort, availsSend) == 1) {
-                                        // Inputs the new access points
-                                        insertAccessPoint(newPopIp, newPopPort, availsSend);
-                                        for(int j = 0; j < availsSend; j++)
-                                            decrementQueryID(queryIdAux);
+                                        // Clears the idStram string, since it's jobs is done
+                                        memset(newPopIp, '\0', BUFFER_SIZE);
+                                        memset(newPopPort, '\0', BUFFER_SIZE);
+                                    }
+                                    // checks if there is another message
+                                    if(clients.buffer[i][newLine + 1] != '\0') {
+                                        // Copies the buffer to the beggining
+                                        strcpy(clients.buffer[i], &clients.buffer[i][newLine + 1]);
+                                    }
+                                    // There's no more messages
+                                    else {
+                                        newAction = 0;
+                                        memset(clients.buffer[i], '\0', PACKAGE_TCP);
                                     }
                                 }
-                            }
-                            else{
-                                // Finds how many bestpops are still to find to that queryID
-                                n = getLeftQueryID(queryIdAux);
-                                if(atoi(avails) <= n)
-                                    availsSend = atoi(avails);
-                                else 
-                                    availsSend = n;
-
-                                if(availsSend != 0){
-                                    POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend);
-                                    for(int j = 0; j < availsSend; j++)
-                                        decrementQueryID(queryIdAux);
+                                // The data is not complete
+                                else {
+                                    newAction = 0;
                                 }
                             }
-                        }
+                            // Receives a POP-REPLY
+                            else if(clients.buffer[i][0] == 'P' && clients.buffer[i][0] == 'R'){
+                                printf("Received a POP_REPLY\n");
 
-                        bufferDown[0] = '\0';
-                        actionChild[0] = '\0';
-                        newPopPort[0] = '\0';
-                        newPopIp[0] = '\0';
-                        avails[0] = '\0';
-                        queryIdAux[0] = '\0';
+                                int newLine = 0;
+                                // Found a complete message
+                                if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
+                                    // checks if both informations are contained there
+                                    if(sscanf(clients.buffer[i],"%[^ ] %[^:]:%[^ ] %[^\n]\n", queryIdAux, newPopIp, newPopPort, avails) != 4) {
+                                        int availsSend;
+
+                                        // When it's root, insert the number of tcp sessions that the iamroot is able to have
+                                        if(root){
+                                            // Finds how many bestpops are still to find to that queryID
+                                            n = getLeftQueryID(queryIdAux);
+                                            // if the client has more tcp sessions than its needed - inputs only the necessary ones
+                                            if(atoi(avails) <= n)
+                                                availsSend = atoi(avails);
+                                            else 
+                                                availsSend = n;
+
+                                            if(availsSend != 0){
+                                                // checks if the AP is already on the list or if the current AP bestpops on the list is smaller than the new receive value
+                                                if(isAPontTheList(newPopIp, newPopPort, availsSend) == 1) {
+                                                    // Inputs the new access points
+                                                    insertAccessPoint(newPopIp, newPopPort, availsSend);
+                                                    for(int j = 0; j < availsSend; j++)
+                                                        decrementQueryID(queryIdAux);
+                                                }
+                                            }
+                                        }
+                                        else{
+                                            // Finds how many bestpops are still to find to that queryID
+                                            n = getLeftQueryID(queryIdAux);
+                                            if(atoi(avails) <= n)
+                                                availsSend = atoi(avails);
+                                            else 
+                                                availsSend = n;
+
+                                            if(availsSend != 0){
+                                                POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend);
+                                                for(int j = 0; j < availsSend; j++)
+                                                    decrementQueryID(queryIdAux);
+                                            }
+                                        }
+                                        memset(newPopPort, '\0', BUFFER_SIZE);
+                                        memset(avails, '\0', BUFFER_SIZE);
+                                        memset(newPopIp, '\0', BUFFER_SIZE);
+                                        memset(queryIdAux, '\0', BUFFER_SIZE);
+                                    }
+                                    // checks if there is another message
+                                    if(clients.buffer[i][newLine + 1] != '\0') {
+                                        // Copies the buffer to the beggining
+                                        strcpy(clients.buffer[i], &clients.buffer[i][newLine + 1]);
+                                    }
+                                    // There's no more messages
+                                    else {
+                                        newAction = 0;
+                                        memset(clients.buffer[i], '\0', PACKAGE_TCP);
+                                    }
+                                }
+                                // The data is not complete
+                                else {
+                                    newAction = 0;
+                                }
+                            }
+                        } 
                     }
                 }
             }

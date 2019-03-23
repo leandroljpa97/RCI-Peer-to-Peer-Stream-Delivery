@@ -1,6 +1,56 @@
 # RCI-Peer-to-Peer-Stream-Delivery
 
-## DUVIDAS
+## DUVIDAS NOVAS
+
+na root so se acrescenta à lista de AP até best pops, ou mais em caso de uma pessoa encher mais do que é necesaio
+
+POR A SEGUIR AO READ <= 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## DUVIDAS VELHAS
+
 -> LIMPEZA DE BUFFERS TA TUDO MAL ACHO EU!
 -> se meter os argumentos de entrada do iamRoot trocados? tenho de prevenir isso?
 -> tenho de verificar se os IPS sao validos e têm os carateres especificados?

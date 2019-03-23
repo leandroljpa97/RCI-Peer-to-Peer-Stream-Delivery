@@ -10,9 +10,9 @@
 #define TIMEOUT_REMOVE 2
 
 #define BUFFER_SIZE 256
-#define PACKAGETCP 65536
+#define PACKAGETCP 65544
 #define TCP_MESSAGE_TYPE 3
-#define TCP_MESSAGE_SIZE 5
+#define TCP_MESSAGE_SIZE 4
 #define TCP_MESSAGE_STREAMID 64
 
 #define IP_SIZE 16
@@ -35,6 +35,7 @@ typedef struct _clients {
 	int available;
 	char **ip;
 	char **port;
+	char **buffer;
 } clients_t;
 
 extern char streamId[];
@@ -106,6 +107,8 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
 						int *dataStream, int *debug);
 
 void setTimeOut(struct timeval*_t1, struct timeval *_t2);
+
+int findsNewLine(char *buffer, int size);
 
 
 #endif
