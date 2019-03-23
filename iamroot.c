@@ -36,9 +36,6 @@ COMMENTS
 
 
 
-
-
-
 void interpRootServerMsg(char _data[]) {
     char content[50];
     int flag = sscanf(_data, "%s", content);
@@ -116,6 +113,9 @@ int main(int argc, char const *argv[]) {
 
     // Return state of the select
     int counter= 0;
+
+    // indice to say who was the last child that i've redirect to
+    int lastChild = -1;
 
     // receive information from dad
     char bufferUp[PACKAGETCP];
@@ -219,9 +219,6 @@ int main(int argc, char const *argv[]) {
                 printf("Received something on the access server\n");
 
                 char bufferAccessServer[BUFFER_SIZE];
-                char availableIAmRootIP[BUFFER_SIZE];
-                char availableIAmRootPort[BUFFER_SIZE];
-
                 struct sockaddr_in addr;
 
                 receiveUdp(fdAccessServer, bufferAccessServer, BUFFER_SIZE, &addr);
@@ -236,8 +233,10 @@ int main(int argc, char const *argv[]) {
                     else {
                         int findAP; 
                         // Gets an IP and Port from the list of AP and responds to the client
-                        if((findAP = getAccessPoint(availableIAmRootIP, availableIAmRootPort)) != -1)
+                        if((findAP = getAccessPoint(ipAccessPoint, portAccessPoint)) != -1){
                             POPRESP(fdAccessServer, &addr, ipAccessPoint, portAccessPoint);
+                            printf("tnh la access points \n");
+                        }
 
                         // Needs to find new AP to the list
                         if(findAP == 1) {
@@ -258,7 +257,7 @@ int main(int argc, char const *argv[]) {
                     int n = readTcp(fdUp, bufferUp);
 
                     // Stream is left - the program needs to restart and try to reconect with the source again
-                    if(n == 0) {
+                    if(n <= 0) {
                         printf("Stream is gone \n");
                         close(fdUp);
                         fdUp = -1;
@@ -293,7 +292,8 @@ int main(int argc, char const *argv[]) {
                         printf("action: %c%c\n", bufferUp[0], bufferUp[1]);
 
                         if(bufferUp[0] == 'D' && bufferUp[1] == 'A') {
-                            printf("I received DATA\n");       
+                            printf("I received DATA\n");  
+                            printf("bufferUp %s \n", bufferUp);     
                             // Copies the amount of bytes that will receive in 4 hex digits
                             strncpy(sizeStream, &bufferUp[3], TCP_MESSAGE_SIZE);
 
@@ -338,7 +338,7 @@ int main(int argc, char const *argv[]) {
                                 sscanf(&bufferUp[3], "%[^\n]\n", idStream);
 
                                 //in this case sizeId received is sizeStream
-                                if(strcmp(idStream, streamId) >= 0) {
+                                if(strcmp(idStream, streamId) == 0) {
                                     NEW_POP(fdUp);
                                 }
                                 // Clears the idStram string, since it's jobs is done
@@ -432,12 +432,16 @@ int main(int argc, char const *argv[]) {
                         printf("mandei um welcome \n");
                     }
                     else{
-                        writeTcp(fdUp,"RE",strlen("RE"));
+                        int n = getIndexChild(lastChild+1);
+                        lastChild = n;
+                        REDIRECT(newfd,clients.ip[lastChild], clients.port[lastChild]);
                         close(newfd);
                     }
                 }
                 else {
-                    writeTcp(fdUp,"RE",strlen("RE"));
+                    int n = getIndexChild(lastChild+1);
+                    lastChild = n;
+                    REDIRECT(newfd,clients.ip[lastChild], clients.port[lastChild]);
                     close(newfd);
                 }
             } 
@@ -456,12 +460,12 @@ int main(int argc, char const *argv[]) {
 
                         int newAction = 1;
                         while(newAction == 1) {
-
                             // Receives a NEW_POP
-                            if(clients.buffer[i][0] == 'N' && clients.buffer[i][0] == 'P') {
+                            if(clients.buffer[i][0] == 'N' && clients.buffer[i][1] == 'P') {
                                 printf("Received a NEW_POP\n");
 
                                 int newLine = 0;
+
                                 // Found a complete message
                                 if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
                                     // checks if both informations are contained there
@@ -499,15 +503,23 @@ int main(int argc, char const *argv[]) {
                                 }
                             }
                             // Receives a POP-REPLY
-                            else if(clients.buffer[i][0] == 'P' && clients.buffer[i][0] == 'R'){
+                            else if(clients.buffer[i][0] == 'P' && clients.buffer[i][1] == 'R'){
                                 printf("Received a POP_REPLY\n");
+                                printf("recebi um %s \n", clients.buffer[i]);
 
                                 int newLine = 0;
                                 // Found a complete message
                                 if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
                                     // checks if both informations are contained there
-                                    if(sscanf(clients.buffer[i],"%[^ ] %[^:]:%[^ ] %[^\n]\n", queryIdAux, newPopIp, newPopPort, avails) != 4) {
+                                    printf("sim entrei \n");
+                                    if(sscanf(&clients.buffer[i][3],"%[^ ] %[^:]:%[^ ] %[^\n]\n", queryIdAux, newPopIp, newPopPort, avails) == 4) {
                                         int availsSend;
+
+                                        printf("queryIdAux2 %s \n", queryIdAux);
+                                            printf("newPopIp2 %s \n", newPopIp);
+                                            printf("Port2 %s \n", queryIdAux);
+
+
 
                                         // When it's root, insert the number of tcp sessions that the iamroot is able to have
                                         if(root){
@@ -530,6 +542,11 @@ int main(int argc, char const *argv[]) {
                                             }
                                         }
                                         else{
+                                            printf("queryIdAux1 %s \n", queryIdAux);
+                                            printf("newPopIp1 %s \n", newPopIp);
+                                            printf("Port1 %s \n", queryIdAux);
+
+
                                             // Finds how many bestpops are still to find to that queryID
                                             n = getLeftQueryID(queryIdAux);
                                             if(atoi(avails) <= n)
@@ -555,12 +572,14 @@ int main(int argc, char const *argv[]) {
                                     }
                                     // There's no more messages
                                     else {
+                                        printf("theres no more messages \n");
                                         newAction = 0;
                                         memset(clients.buffer[i], '\0', PACKAGE_TCP);
                                     }
                                 }
                                 // The data is not complete
                                 else {
+                                    printf("oii? \n");
                                     newAction = 0;
                                 }
                             }

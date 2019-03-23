@@ -92,6 +92,10 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
             exit(0);
         }
 
+        printf("availableIAmRootIP : %s \n", _availableIAmRootIP);
+                printf("availableIAmRootPort : %s  \n", _availableIAmRootPort);
+
+
         printf("recebi um popresp: %s\n", buffer);
     }
 

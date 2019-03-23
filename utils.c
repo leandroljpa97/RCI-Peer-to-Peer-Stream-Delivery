@@ -347,3 +347,13 @@ int findsNewLine(char *buffer, int size) {
     return -1;
 }
 
+
+int getIndexChild(int _index){
+    for(int i = _index; i < tcpsessions; i++)
+        if(clients.fd[i] != 0)
+            return i;
+
+    int n = getIndexChild(0);
+    return n;
+   
+}

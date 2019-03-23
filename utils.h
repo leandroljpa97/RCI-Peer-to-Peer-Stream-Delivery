@@ -109,6 +109,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
 void setTimeOut(struct timeval*_t1, struct timeval *_t2);
 
 int findsNewLine(char *buffer, int size);
+int getIndexChild(int _index);
 
 
 #endif
