@@ -27,7 +27,11 @@ JA ESTA  A FUNCIONAR ISTO!! PARA TESTAR COMENTEI NA FUNÇAO DE CTR+C O (IF(ROOT)
 
 -Linha 262 do ficheiro APIROOTSERVER.c .. nao sei o que se faz nesse caso!!
 
--> fds tou-me a passar! quero mandar a root a baixo a ver o que acontece. mas smp que mando a root a baixo, o servidor fonte tambem vai a baixo com o ncat! lol
+-> experimenta ter a root com o ncat, filhos e mandar o servidor ncat a baixo!! ve se ta tudo ok nesse caso sff! (vai a baixo como e obvio mas as msgs que há.. ve sff)
+
+-> no ctr+c temos de dar close a todos os sockets nao?
+
+-> fds tou-me a passar! quero mandar a root a baixo a ver o que acontece. mas smp que mando a root a baixo, o servidor fonte tambem vai a baixo com o ncat! lol (fiz com o do stor)
 
 
 

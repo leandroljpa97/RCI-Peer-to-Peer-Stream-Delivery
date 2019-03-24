@@ -27,9 +27,7 @@ void ctrl_c_callback_handler(int signum) {
 
     closeAllClients();
     clearClientStructure();
-
-
-
+    //temos de dar close aos sockets todos nao?
     exit(0);
 }
 
@@ -45,6 +43,35 @@ void initializations() {
 
     if(ctrl_c == SIG_ERR || (sigaction(SIGPIPE, &act, NULL) == -1))
         error_confirmation("Could not handle SIGINT or SIGPIPE");
+}
+
+void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
+
+    printf("Stream Stop .. Wait a moment! \n");
+
+    status = DAD_LOST;
+    close(*_fdUp);
+    *_fdUp = -1;
+
+    for(int j = 0; j < tcpsessions; j++)
+        if(clients.fd[j] != 0)
+            if(!BROKEN_STREAM(clients.fd[j]))
+                removeChild(j);
+
+
+    WHOISROOT(_root,_fdAccessServer,_fdUp);
+    if(*_fdUp == -1){
+        printf("My dad did not do REMOVE() \n");
+        REMOVE();
+        WHOISROOT(_root,_fdAccessServer,_fdUp);
+        status = NORMAL;
+    }
+    printf("Stream recovered. Enjoy it \n");
+
+    for(int j = 0; j < tcpsessions; j++)
+        if(clients.fd[j] != 0)
+            if(!STREAM_FLOWING(clients.fd[j]))
+                removeChild(j);
 }
 
 int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAmRootIP[] , char _availableIAmRootPort[]){
@@ -232,6 +259,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         // If the tree is empty, the program is the root stream. Change the state to root and goes to connect to a stream
         if(!strcmp(action, "URROOT")){
             // Indicates that the program is the root of a tree
+            printf("I am ROOT \n");
             *root = 1;
 
             // Creates Access Server

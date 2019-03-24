@@ -34,34 +34,6 @@ COMMENTS
 
 
 
-void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
-
-    printf("Stream Stop .. Wait a moment! \n");
-
-    status = DAD_LOST;
-    close(*_fdUp);
-    *_fdUp = -1;
-
-    for(int j = 0; j < tcpsessions; j++)
-        if(clients.fd[j] != 0)
-            if(!BROKEN_STREAM(clients.fd[j]))
-                removeChild(j);
-
-
-    WHOISROOT(_root,_fdAccessServer,_fdUp);
-    if(*_fdUp == -1){
-        printf("My dad did not do REMOVE() \n");
-        REMOVE();
-        WHOISROOT(_root,_fdAccessServer,_fdUp);
-        status = NORMAL;
-    }
-    printf("Stream recovered. Enjoy it \n");
-
-    for(int j = 0; j < tcpsessions; j++)
-        if(clients.fd[j] != 0)
-            if(!STREAM_FLOWING(clients.fd[j]))
-                removeChild(j);
-}
 
 
 

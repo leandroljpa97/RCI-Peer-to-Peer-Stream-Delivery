@@ -40,6 +40,8 @@ void closeAllClients() {
     }
 }
 
+
+
 /* ENTERING STREAM TREE */
 
 int WELCOME(int _fd) {
