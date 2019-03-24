@@ -44,4 +44,7 @@ void deleteClientAP(clientList_t  *removeIP);
 
 int getAccessPoint(char *ip, char *port);
 
+void removeNode(char * ip, char *port);
+
+
 #endif

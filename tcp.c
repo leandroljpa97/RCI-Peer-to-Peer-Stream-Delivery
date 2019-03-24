@@ -164,7 +164,7 @@ int writeTcp(int _fd, char *data, int size) {
 
     while(nLeft > 0) {
         nSended = write(_fd, data, nLeft);
-        if(nSended <= 0){
+        if(nSended < 0){
             printf("error sending message \n");
             return 0;
         }

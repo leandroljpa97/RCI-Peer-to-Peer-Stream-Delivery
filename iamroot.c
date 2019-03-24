@@ -268,7 +268,7 @@ int main(int argc, char const *argv[]) {
                     for (int i = 0; i < tcpsessions; ++i){
                         if(clients.fd[i] != 0) {
                             if(DATA(clients.fd[i], n, bufferUp) == 0) {
-                                closeClient(clients.fd[i]);
+                                removeChild(i);
                                 printf("Child gone\n");
                             }
                         }
@@ -281,8 +281,18 @@ int main(int argc, char const *argv[]) {
                     // Reads the message from its dad
                     int n = readTcp(fdUp, bufferUp);
                     if(n <= 0)  {
+                        close(fdUp);
+                        fdUp = -1;
+
+                        for(int j = 0; j < tcpsessions; j++)
+                            if(clients.fd[j] != 0)
+                                BROKEN_STREAM(clients.fd[j]);
+
                         printf("Dad left\n");
+                        WHOISROOT(&root,&fdAccessServer,&fdUp);
+
                         // Chamar WHOISROOT
+                        continue;
                     }
 
                     printf("bufferUp %s\n", bufferUp);
@@ -303,7 +313,7 @@ int main(int argc, char const *argv[]) {
                                 for (int i = 0; i < tcpsessions; ++i) {
                                     if(clients.fd[i] != 0) {
                                         if(DATA(clients.fd[i], (int) strtol(sizeStream, NULL, 16), &bufferUp[8]) == 0) {
-                                            closeClient(clients.fd[i]);
+                                            removeChild(i);
                                             printf("Child gone\n");
                                         }
                                     }
@@ -407,6 +417,33 @@ int main(int argc, char const *argv[]) {
                                 newAction = 0;
                             }
                         }
+
+                        else if(bufferUp[0] == 'B' && bufferUp[1] == 'S'){
+                            int newLine = 0;
+                            // Found a complete message
+                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                               
+                               for(int j = 0; j < tcpsessions; j++)
+                                    if(clients.fd[j] != 0)
+                                        BROKEN_STREAM(clients.fd[j]);
+
+
+                                // checks if there is another message
+                                if(bufferUp[newLine + 1] != '\0') {
+                                    // Copies the buffer to the beggining
+                                    strcpy(bufferUp, &bufferUp[newLine + 1]);
+                                }
+                                // There's no more messages
+                                else {
+                                    newAction = 0;
+                                    memset(bufferUp, '\0', PACKAGE_TCP);
+                                }
+                            }
+                            // The data is not complete
+                            else {
+                                newAction = 0;
+                            }
+                        }
                     }
                 }                
             }
@@ -452,8 +489,11 @@ int main(int argc, char const *argv[]) {
                     if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
                         printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
                         int n = readTcp(clients.fd[i], clients.buffer[i]);
-                        if(n == -1)  {
+                        if(n <= 0)  {
                             printf("Child left\n");
+                            removeChild(i);
+                            continue;
+
                         }
 
                         printf("clients.buffer[%d]: %s\n", i, clients.buffer[i]);

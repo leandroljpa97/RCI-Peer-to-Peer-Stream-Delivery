@@ -254,3 +254,30 @@ int getAccessPoint(char *ip, char *port) {
     return 0;
 }
 
+void removeNode(char * ip, char *port){
+    clientList_t *myNode = accessPoints, *previous=NULL;
+    int flag = 0;
+
+    while(myNode!=NULL) {
+        if((strcmp(myNode->ip , ip)== 0) && (strcmp(myNode->port , port)==0))
+        {
+            if(previous==NULL)
+                accessPoints = myNode->next;
+            else
+                previous->next = myNode->next;
+
+
+            flag = 1;
+            free(myNode); //need to free up the memory to prevent memory leak
+            break;
+        }
+
+        previous = myNode;
+        myNode = myNode->next;
+    }
+
+    if(flag==0)
+        printf("Key not found!\n");
+
+}
+

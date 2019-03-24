@@ -116,27 +116,7 @@ int deleteFdClient(int _delfd) {
     return 0;
 }
 
-void closeClient(int _fd) {
-    int i;
-    for (i = 0; i < tcpsessions; ++i) {
-        if(clients.fd[i] == _fd) {
-            close(_fd);
-            clients.fd[i] = 0;
-            clients.available++;
-            break;
-        }
-    }
-    memset(clients.ip[i], '\0', IP_SIZE);
-    memset(clients.port[i],'\0', PORT_SIZE);
-    memset(clients.buffer[i], '\0', PACKAGETCP);
-}
 
-void closeAllClients() {
-    for (int i = 0; i < tcpsessions; ++i) {
-        if(clients.fd[i] != 0)
-            closeClient(clients.fd[i]);
-    }
-}
 
 void clearClientStructure() {
     free(clients.fd);
@@ -357,3 +337,4 @@ int getIndexChild(int _index){
     return n;
    
 }
+

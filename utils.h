@@ -84,9 +84,6 @@ int insertFdClient(int _newfd);
 
 int deleteFdClient(int _delfd); 
 
-void closeClient(int _fd);
-
-void closeAllClients();
 
 void clearClientStructure();
 

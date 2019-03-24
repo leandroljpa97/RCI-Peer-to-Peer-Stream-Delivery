@@ -3,12 +3,42 @@
 #include <netdb.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/socket.h>
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <arpa/inet.h>
+
 
 #include "APIpairComunication.h"
 #include "utils.h"
 #include "tcp.h"
+#include "list.h"
 
 #define HEX_STYLE "0000"
+
+void removeChild(int index){
+    removeNode(clients.ip[index], clients.port[index]);
+    close(clients.fd[index]);
+    clients.fd[index] = 0;
+    clients.available ++;
+
+    memset(clients.ip[index], '\0', IP_SIZE);
+    memset(clients.port[index],'\0', PORT_SIZE);
+    memset(clients.buffer[index], '\0', PACKAGETCP);
+}
+
+void closeAllClients() {
+    for (int i = 0; i < tcpsessions; ++i) {
+        if(clients.fd[i] != 0)
+            removeChild(i);
+    }
+}
 
 /* ENTERING STREAM TREE */
 
@@ -59,7 +89,7 @@ int REDIRECT(int _fd, char _ipaddr[], char _tport[]) {
     char buffer[BUFFER_SIZE];
 
     // Creates REDIRECT message
-    strcpy(buffer, "RD ");
+    strcpy(buffer, "RE ");
     strcat(buffer, _ipaddr);
     strcat(buffer,":");
     strcat(buffer, _tport);
@@ -93,9 +123,29 @@ int STREAM_FLOWING(int _fd) {
     if(writeTcp(_fd, buffer, i + 1) != i + 1) 
         return 0;
 
-    printf("sent a REDIRECT\n");
+    printf("sent a Stream Flowing\n");
 
     return 1;
+}
+
+int BROKEN_STREAM(int _fd){
+    char buffer[BUFFER_SIZE];
+
+    // Creates BROKEN_STREAM message
+    strcpy(buffer, "BS");
+    strcat(buffer,"\n");
+
+    // finds the size of the BROKEN_STREAM message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+        return 0;
+
+    printf("sent a broken Stream\n");
+
+    return 1;
+
 }
 
 int DATA(int _fd, int nbytes, char _data[]) {
@@ -262,3 +312,4 @@ int TREE_REPLY(int _fd) {
 
     return 1;
 }
+
