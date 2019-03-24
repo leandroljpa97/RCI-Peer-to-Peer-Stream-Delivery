@@ -28,7 +28,8 @@ int POP_QUERYclients(int _fd, char _queryId[], int _bestPops);
 
 int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avails);
 
-void removeChild(int index);
+int TREE_QUERY(int _fd, char _ipaddr[], char _tport[]);
 
+int TREE_REPLY(int _fd);
 
 #endif

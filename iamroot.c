@@ -127,6 +127,11 @@ int main(int argc, char const *argv[]) {
     char queryIdAux[BUFFER_SIZE];
     char bestpopsAux[BUFFER_SIZE];
     char avails[BUFFER_SIZE];
+    char TQip[BUFFER_SIZE];
+    char TQport[BUFFER_SIZE];
+    char TRip[BUFFER_SIZE];
+    char TRport[BUFFER_SIZE];
+    char TRtcpsessions[BUFFER_SIZE];
 
     // Resets the number of AP availables on the list
     numberOfAP = 0;
@@ -428,7 +433,6 @@ int main(int argc, char const *argv[]) {
                                 newAction = 0;
                             }
                         }
-
                         else if(bufferUp[0] == 'B' && bufferUp[1] == 'S'){
                             int newLine = 0;
 
@@ -466,11 +470,56 @@ int main(int argc, char const *argv[]) {
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
                                
-                               for(int j = 0; j < tcpsessions; j++)
+                                for(int j = 0; j < tcpsessions; j++)
                                     if(clients.fd[j] != 0)
                                         if(!STREAM_FLOWING(clients.fd[j]))
                                             removeChild(j);
 
+                                // checks if there is another message
+                                if(bufferUp[newLine + 1] != '\0') {
+                                    // Copies the buffer to the beggining
+                                    strcpy(bufferUp, &bufferUp[newLine + 1]);
+                                }
+                                // There's no more messages
+                                else {
+                                    newAction = 0;
+                                    memset(bufferUp, '\0', PACKAGE_TCP);
+                                }
+                            }
+                            // The data is not complete
+                            else {
+                                newAction = 0;
+                            }
+                        }
+                        else if(bufferUp[0] == 'T' && bufferUp[1] == 'Q'){
+                            int newLine = 0;
+
+                            printf("I received a TREE_QUERY\n");
+
+                            // Found a complete message
+                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                if(sscanf(&bufferUp[3], "%[^:]:%[^\n]\n", TQip, TQport) == 2) {
+                                    printf("TQip: %s TQport: %s\n", TQip, TQport);
+
+                                    // Checks if the TREE_QUERY destination is the own
+                                    if((strcmp(ipaddr, TQip) == 0) && (strcmp(tport, TQport) == 0)) {
+                                        // Sends a tree reply
+                                        if(!TREE_REPLY(fdUp)) {
+                                            // CHAMAR WHO IS ROOT
+                                        }
+
+                                    }
+                                    else {
+                                        // Since he is not the destiny, retransmit the message to its childs
+                                        for(int j = 0; j < tcpsessions; j++)
+                                            if(clients.fd[j] != 0)
+                                                if(writeTcp(clients.fd[j], bufferUp, newLine + 1) != newLine + 1)
+                                                    removeChild(j);
+                                    }
+                                    // Clears the idStram string, since it's jobs is done
+                                    memset(TQip, '\0', BUFFER_SIZE);
+                                    memset(TQport, '\0', BUFFER_SIZE);
+                                }
                                 // checks if there is another message
                                 if(bufferUp[newLine + 1] != '\0') {
                                     // Copies the buffer to the beggining
@@ -659,6 +708,52 @@ int main(int argc, char const *argv[]) {
                                         memset(avails, '\0', BUFFER_SIZE);
                                         memset(newPopIp, '\0', BUFFER_SIZE);
                                         memset(queryIdAux, '\0', BUFFER_SIZE);
+                                    }
+                                    // checks if there is another message
+                                    if(clients.buffer[i][newLine + 1] != '\0') {
+                                        // Copies the buffer to the beggining
+                                        strcpy(clients.buffer[i], &clients.buffer[i][newLine + 1]);
+                                    }
+                                    // There's no more messages
+                                    else {
+                                        printf("theres no more messages \n");
+                                        newAction = 0;
+                                        memset(clients.buffer[i], '\0', PACKAGE_TCP);
+                                    }
+                                }
+                                // The data is not complete
+                                else {
+                                    printf("oii? \n");
+                                    newAction = 0;
+                                }
+                            }
+                            // Receives a TREE-REPLY
+                            else if(clients.buffer[i][0] == 'T' && clients.buffer[i][1] == 'R'){
+                                printf("Received a TREE_REPLY\n");
+                                printf("recebi um %s \n", clients.buffer[i]);
+
+                                int newLine = 0;
+                                // Found a complete message
+                                if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
+                                    // checks if both informations are contained there
+                                    printf("sim entrei \n");
+                                    if(sscanf(&clients.buffer[i][3],"%[^:]:%[^ ] %[^\n]\n", TRip, TRport, TRtcpsessions) == 3) {
+                                        int c;
+                                        // Counts how many connections has received -- searchs for the two \n
+                                        for (c = 0; (newLine = findsNewLine(&clients.buffer[i][newLine + 1], PACKAGE_TCP)) == 0 && c < atoi(TRtcpsessions) + 1; ++c);
+
+                                        if(c == atoi(TRtcpsessions)) {
+
+                                        }
+                                        if(root) {
+                                            
+                                        }
+                                        else {
+                                            newAction = 0;
+                                        }
+                                        memset(TRip, '\0', BUFFER_SIZE);
+                                        memset(TRport, '\0', BUFFER_SIZE);
+                                        memset(TRtcpsessions, '\0', BUFFER_SIZE);
                                     }
                                     // checks if there is another message
                                     if(clients.buffer[i][newLine + 1] != '\0') {

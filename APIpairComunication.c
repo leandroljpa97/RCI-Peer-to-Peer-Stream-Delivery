@@ -301,6 +301,15 @@ int TREE_REPLY(int _fd) {
     sprintf(tcpsessionsString, "%d", tcpsessions);
     strcat(buffer, tcpsessionsString);
     strcat(buffer, "\n");
+    for (int i = 0; i < tcpsessions; ++i) {
+        if(clients.fd[i] != 0) {
+            strcat(buffer, clients.ip[i]);
+            strcat(buffer, ":");
+            strcat(buffer, clients.port[i]);
+            strcat(buffer, "\n");
+        }
+    }
+    strcat(buffer, "\n");
     printf("o buffer no TREE_QUERY é %s\n", buffer);
 
     // finds the size of the POP_REPLY message

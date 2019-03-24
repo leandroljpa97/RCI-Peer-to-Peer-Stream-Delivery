@@ -277,12 +277,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
 
             char availableIAmRootIP[IP_SIZE], availableIAmRootPort[BUFFER_SIZE];
 
-            // Communicates with access server to understand to where to connect
-            
-            /*if(findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == 0) {
-                WHOISROOT(root, fdAccessServer, fdUp);
-            } */
-                
+            // Communicates with access server to understand to where to connect                
             findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort);   
             *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
 
