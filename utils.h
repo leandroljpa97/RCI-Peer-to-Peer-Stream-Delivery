@@ -7,7 +7,7 @@
 
 #define TRIES 3
 #define TIMEOUT 10
-#define TIMEOUT_REMOVE 2
+#define TIMEOUT_REMOVE 5
 
 #define BUFFER_SIZE 256
 #define PACKAGETCP 65544
@@ -28,6 +28,9 @@
 #define DEFAULT_TSECS 5
 #define DEFAULT_DATA_STREAM 1
 #define DEFAULT_DEBUG 0
+
+#define NORMAL 0
+#define DAD_LOST 1
 
 //use this structure to childreens of each iamRoot and in the case  of being root, to accessPoints
 typedef struct _clients {
@@ -53,6 +56,9 @@ extern int tsecs;
 extern int dataStream;
 extern int debug;
 
+// Indicates if the iamroot app is a root of the stream
+extern int root;
+
 //variables stored to iamroot that is finding new accessPoint!
 extern char ipAccessPoint[IP_SIZE];
 extern char portAccessPoint[PORT_SIZE];
@@ -66,8 +72,9 @@ extern int numberOfAP;
 // Indicatse the number of the Query in 16 bits
 extern uint16_t queryId ;
 
+extern int status;
 
-void ctrl_c_callback_handler(int signum);
+
 
 void error_confirmation(char*s);
 
@@ -87,7 +94,6 @@ int deleteFdClient(int _delfd);
 
 void clearClientStructure();
 
-void initializations();
 
 void convertNumDoHex(char *nbytesHex, int num);
 

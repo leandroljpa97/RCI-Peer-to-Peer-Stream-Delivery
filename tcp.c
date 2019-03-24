@@ -63,19 +63,25 @@ int connectToTcp(char _availableIAmRootIP[], char _availableIAmRootPort[]) {
 
     int n = getaddrinfo(_availableIAmRootIP, _availableIAmRootPort, &hints, &res_tcp);
     if(n != 0) {
-        printf("error getaddrinfo in TCP source server \n");
+        if(status == DAD_LOST)
+            return -1;
+        printf("error getaddrinfo in TCP source server  2\n");
         exit(1);
      }
 
     int fdUp = socket((res_tcp)->ai_family, (res_tcp)->ai_socktype, (res_tcp)->ai_protocol);
-    if(fdUp == -1) {
+    if(fdUp == -1 ) {
+        if(status == DAD_LOST)
+            return -1;
         printf("error creating TCP socket TCP to source server...2. \n ");
         exit(1);
     }
 
     n = connect(fdUp, (res_tcp)->ai_addr, (res_tcp)->ai_addrlen);
-    if(n == -1) {
-        printf("error in connect with TCP socket TCP in source.... \n ");
+    if(n == -1 ) {
+        if(status == DAD_LOST)
+            return -1;
+        printf("error in connect with TCP socket TCP in source.... 2 \n ");
         exit(1);
     }
 
@@ -166,7 +172,7 @@ int writeTcp(int _fd, char *data, int size) {
         nSended = write(_fd, data, nLeft);
         if(nSended < 0){
             printf("error sending message \n");
-            return 0;
+            return -1;
         }
 
         nLeft -= nSended;

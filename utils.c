@@ -30,6 +30,8 @@ int tsecs = DEFAULT_TSECS;
 int dataStream = DEFAULT_DATA_STREAM;
 int debug = DEFAULT_DEBUG;
 
+// Indicates if the iamroot app is a root of the stream
+int root = 0;
 // Structure with clients information
 clients_t clients;
 
@@ -42,31 +44,17 @@ uint16_t queryId = 0;
 char ipAccessPoint[];
 char portAccessPoint[];
 
+int status = NORMAL;
 
-void ctrl_c_callback_handler(int signum) {
-    printf("sai por CTRL_C \n ");
 
-    closeAllClients();
-    clearClientStructure();
 
-    exit(0);
-}
 
 void error_confirmation(char*s) {
         printf("%s \n",s);
         exit(EXIT_FAILURE);
 }
 
-void initializations() {
-    void (*ctrl_c)(int);
-    ctrl_c = signal(SIGINT, ctrl_c_callback_handler);
 
-    void (*close_socket)(int);
-    close_socket = signal(SIGPIPE, SIG_IGN);
-
-    if(ctrl_c == SIG_ERR || close_socket == SIG_ERR)
-        error_confirmation("Could not handle SIGINT or SIGPIPE");
-}
 
 void initClientStructure(){
     clients.available = tcpsessions;

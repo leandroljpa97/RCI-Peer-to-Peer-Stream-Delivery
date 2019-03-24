@@ -54,7 +54,7 @@ int WELCOME(int _fd) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+    if((writeTcp(_fd, buffer, i + 1)) == -1) 
         return 0;
 
     printf("recebi um novo cliente  \n");
@@ -77,7 +77,7 @@ int NEW_POP(int _fd) {
     for(i = 0; buffer[i] != '\0'; ++i);
 
     printf("o buffer é %s \n", buffer);
-    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+    if((writeTcp(_fd, buffer, i + 1)) == -1) 
         return 0;
 
     printf("sent a NEW_POP\n");
@@ -99,7 +99,7 @@ int REDIRECT(int _fd, char _ipaddr[], char _tport[]) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+    if((writeTcp(_fd, buffer, i + 1))== -1) 
         return 0;
 
     printf("sent a REDIRECT\n");
@@ -120,7 +120,7 @@ int STREAM_FLOWING(int _fd) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+    if((writeTcp(_fd, buffer, i + 1)) == -1) 
         return 0;
 
     printf("sent a Stream Flowing\n");
@@ -139,7 +139,7 @@ int BROKEN_STREAM(int _fd){
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(writeTcp(_fd, buffer, i + 1) != i + 1) 
+    if((writeTcp(_fd, buffer, i + 1)) == -1) 
         return 0;
 
     printf("sent a broken Stream\n");
@@ -168,7 +168,7 @@ int DATA(int _fd, int nbytes, char _data[]) {
 
     printf("i %d, a data que vou enviar é : %s \n", i ,buffer);
 
-    if(writeTcp(_fd, buffer, i) != i) 
+    if((writeTcp(_fd, buffer, i)) == -1) 
         return 0;
 
     printf("sent DATA\n");
@@ -199,7 +199,7 @@ int POP_QUERYroot(int _fd, uint16_t _queryId, int _bestPops) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+    if((writeTcp(_fd, buffer, i + 1)) ==-1) {
     	printf("Fail sending POP_QUERY to fd %d\n", _fd);
     	return 0;
 	}
@@ -224,7 +224,7 @@ int POP_QUERYclients(int _fd, char _queryId[], int _bestPops) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+    if((writeTcp(_fd, buffer, i + 1)) == -1) {
         printf("Fail sending POP_QUERY to fd %d\n", _fd);
         return 0;
     }
@@ -253,7 +253,7 @@ int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avai
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+    if((writeTcp(_fd, buffer, i + 1)) == -1) {
     	printf("Fail sending POP_REPLY\n");
     	return 0;
 	}
@@ -278,7 +278,7 @@ int TREE_QUERY(int _fd, char _ipaddr[], char _tport[]) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+    if((writeTcp(_fd, buffer, i + 1)) == -1) {
         printf("Fail sending POP_REPLY\n");
         return 0;
     }
@@ -305,7 +305,7 @@ int TREE_REPLY(int _fd) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    if(i + 1 != writeTcp(_fd, buffer, i + 1)) {
+    if((writeTcp(_fd, buffer, i + 1)) == -1) {
         printf("Fail sending POP_REPLY\n");
         return 0;
     }

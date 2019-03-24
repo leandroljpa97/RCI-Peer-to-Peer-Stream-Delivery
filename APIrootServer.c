@@ -9,6 +9,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <signal.h>
+
 
 #include "APIrootServer.h"
 #include "APIaccessServer.h"
@@ -16,6 +18,34 @@
 #include "utils.h"
 #include "udp.h"
 #include "tcp.h"
+
+void ctrl_c_callback_handler(int signum) {
+    printf("sai por CTRL_C \n ");
+
+    if(root)
+      REMOVE();
+
+    closeAllClients();
+    clearClientStructure();
+
+
+
+    exit(0);
+}
+
+void initializations() {
+    void (*ctrl_c)(int);
+    ctrl_c = signal(SIGINT, ctrl_c_callback_handler);
+
+    struct sigaction act;
+
+    memset(&act,0,sizeof(act));
+    act.sa_handler = SIG_IGN;
+
+
+    if(ctrl_c == SIG_ERR || (sigaction(SIGPIPE, &act, NULL) == -1))
+        error_confirmation("Could not handle SIGINT or SIGPIPE");
+}
 
 int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAmRootIP[] , char _availableIAmRootPort[]){
     struct sockaddr_in addr;
@@ -220,11 +250,14 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             char availableIAmRootIP[IP_SIZE], availableIAmRootPort[BUFFER_SIZE];
 
             // Communicates with access server to understand to where to connect
-            if(findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == 0) {
+            
+            /*if(findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == 0) {
                 WHOISROOT(root, fdAccessServer, fdUp);
-            }
-
+            } */
+                
+            findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort);   
             *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
+
         }
         else if(!strcmp(action, "ERROR")) {
             //aqui a bufferRootServer é a mensagem de erro!!
@@ -268,9 +301,11 @@ int REMOVE() {
 	struct addrinfo * res = createUPDsocket(&fd, rsaddr, rsport);
 
 	// Creates remove message with the idication of current StreamID
-    strcpy(buffer, "REMOVE ");
+   /* strcpy(buffer, "REMOVE ");
     strcat(buffer, streamId);
-    strcat(buffer, "\n");
+    strcat(buffer, "\n"); */
+
+    sprintf(buffer, "REMOVE %s\n", streamId);
 
     // finds the size of the WHOISROOT message
     int i = 0;

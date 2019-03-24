@@ -14,10 +14,20 @@ POR A SEGUIR AO READ <= 0
 
 
 
+## Decisoes e casos a ter em atençao:
 
+- Quando se quebra a ligaçao com a stream faço remove() na root, e volto a fazer whoisroot, se nao der fecha-se!!
 
+-As vezes dá mal quando retiro a ROOT LOL NSEI PQ! ahhh e pq nao esta a remover!!!nsei pq!
 
+- Se a root for a baixo sem fazer CTR+C o outro vai fazer whoisroot, e vai dar que ROOTIS xxx, e o xxx ja nao existe, e assim o programa vai a baixo! temos de ter em atenção isto, pq nesse caso o novo gajo faz REMOVE()  e volta a fazer WHOISROOT! 
+JA ESTA  A FUNCIONAR ISTO!! PARA TESTAR COMENTEI NA FUNÇAO DE CTR+C O (IF(ROOT) REMOVE!!) E FIZ COM O SERVIDOR DO STOR. O QUE ACONTECE EQ ELE TENTA 3X POP REQ PARA O SERVIDOR DE ACESSO(O ANTIGO! ) e NAO DA . ENT ELE NA FUNÇAO DADLEFT FAZ REMOVE E FAZ WHOISROOT AGAIN! ESTA DICA TA MUIRA BOA. PARA ISSO TENHO DE USAR O ESTADO status= DAD_LOST PQ NA FUNÇAO CONNECT TO TCP TENHO DE USAR ISSO SENAO ELE IA LOGO A BAIXO!
 
+- acho que deviamos mudar todos os strcat para sprintf() como fiz no REMOVE.. NAO?
+
+-Linha 262 do ficheiro APIROOTSERVER.c .. nao sei o que se faz nesse caso!!
+
+-> fds tou-me a passar! quero mandar a root a baixo a ver o que acontece. mas smp que mando a root a baixo, o servidor fonte tambem vai a baixo com o ncat! lol
 
 
 
