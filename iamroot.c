@@ -77,6 +77,15 @@ void interpRootServerMsg(char _data[]) {
         }
         else if(!strcmp(content,"tree")){
             printf("pressed tree \n");
+            printf("%s\n", streamId);
+            printf("%s:%s (%d", ipaddr, tport, tcpsessions);
+            for (int i = 0; i < tcpsessions; ++i) {
+                if(clients.fd[i] != 0) {
+                    printf(" %s:%s", clients.ip[i], clients.port[i]);
+                    TREE_QUERY(clients.fd[i], clients.ip[i], clients.port[i]);
+                }
+            }
+            printf(")\n");
 
         }
         else if(!strcmp(content,"exit")){
@@ -158,6 +167,12 @@ int main(int argc, char const *argv[]) {
     // Create TCP Server
     fdDown = createTcpServer();
 
+    // Time variables
+    t1 = NULL;
+    t2.tv_usec = 0;
+    t2.tv_sec = TIMEOUT;
+    t1 = &t2;
+
     while(1) {
     	// Inits the mask of file descriptor
         initMaskStdinFd(&fd_sockets, &maxfd);
@@ -181,11 +196,7 @@ int main(int argc, char const *argv[]) {
             }
         }
 
-        // Time variables
-        t1 = NULL;
-        t2.tv_usec = 0;
-        t2.tv_sec = TIMEOUT;
-        t1 = &t2;
+        
 
         // Monitor all the file descritors to check for new inputs
         counter = select(maxfd + 1, &fd_sockets, (fd_set*) NULL, (fd_set *) NULL, (struct timeval*) t1);     
@@ -203,6 +214,16 @@ int main(int argc, char const *argv[]) {
 
         if(!counter){
             // Select got timeout, reset
+            // Time variables
+            t1 = NULL;
+            t2.tv_usec = 0;
+            t2.tv_sec = TIMEOUT;
+            t1 = &t2;
+
+            if(WHOISROOTwithoutResponse() == 0) {
+                printf("Unable to make WHO IS ROOT periódico\n");
+            }
+            
         }
         else {
         	// Checks if something was written on the standart input
@@ -742,7 +763,7 @@ int main(int argc, char const *argv[]) {
                                         // prints the content of the message
                                         if(sscanf(&clients.buffer[i][3],"%[^:]:%[^ ] %[^\n]\n", TRip, TRport, TRtcpsessions) == 3) {
                                             printf("%s:%s (%s", TRip, TRport, TRtcpsessions);
-                                            for(newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP); newLine = doubleNewLine; newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) {
+                                            for((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)); newLine <  doubleNewLine - 1; newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) {
                                                 if(sscanf(&clients.buffer[i][newLine+3],"%[^:]:%[^\n]\n", TRip, TRport) == 2) {
                                                     printf(" %s:%s", TRip, TRport);
                                                     // Sends the message of TREE QUERY to discover the suns of the sun

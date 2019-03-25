@@ -9,6 +9,8 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp);
 
 int WHOISROOT(int *root, int *fdAccessServer, int *fdUp);
 
+int WHOISROOTwithoutResponse();
+
 int REMOVE();
 
 int DUMP();

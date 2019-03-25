@@ -229,11 +229,11 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         // Puts server in receive state with timeout option
         counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);     
             
-        if(counter < 0){
+        if(counter < 0) {
             perror("Error in select"); 
             close(fd);
             exit(0);
-            }
+        }
         // if counter = 0, any response was received
         if(!counter){
             printf("timeout...\n");
@@ -300,6 +300,44 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
     return 1;
 }
 
+int WHOISROOTwithoutResponse() {
+    int fd;
+    char buffer[BUFFER_SIZE];
+    
+    // Creates an UDP socket for communication with root server
+    struct addrinfo * res = createUPDsocket(&fd, rsaddr, rsport);
+
+    // Creates WHOISROOT message
+    strcpy(buffer, "WHOISROOT ");
+    strcat(buffer, streamId);
+    strcat(buffer, " ");
+    strcat(buffer, ipaddr);
+    strcat(buffer, ":");
+    strcat(buffer, uport);
+    strcat(buffer, "\n");
+
+    printf("WHOISROOT periódico: %s\n", buffer);
+
+    // finds the size of the WHOISROOT message
+    int i = 0;
+    for(i = 0; buffer[i] != '\0'; ++i);
+
+    // Sends the information to the root server
+    if(sendUdp(fd, buffer, i + 1, res) != i + 1) {
+        freeaddrinfo(res);
+        close(fd);
+        return 0;
+    }
+
+    freeaddrinfo(res);
+
+    close(fd);
+
+    return 1;
+}
+
+
+
 int REMOVE() {
 	// File descriptor to communicate with root server
 	int fd = -1;
@@ -324,10 +362,6 @@ int REMOVE() {
 	struct addrinfo * res = createUPDsocket(&fd, rsaddr, rsport);
 
 	// Creates remove message with the idication of current StreamID
-   /* strcpy(buffer, "REMOVE ");
-    strcat(buffer, streamId);
-    strcat(buffer, "\n"); */
-
     sprintf(buffer, "REMOVE %s\n", streamId);
 
     // finds the size of the WHOISROOT message
