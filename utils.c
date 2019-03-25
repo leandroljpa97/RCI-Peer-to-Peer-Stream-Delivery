@@ -309,8 +309,18 @@ void setTimeOut(struct timeval*_t1, struct timeval *_t2) {
 
 int findsNewLine(char *buffer, int size) {
     for (int i = 0; i < size; ++i) {
-        if(buffer[i] == '\0')
+        if(buffer[i] == '\n')
             return i;
+    }
+    return -1;
+}
+
+int findsDoubleNewLine(char *buffer, int size) {
+    for (int i = 0; i < size; ++i) {
+        if(buffer[i] == '\n')
+            if(i + 1 < size)
+                if(buffer[i+1] == '\n')
+                    return i+1;
     }
     return -1;
 }

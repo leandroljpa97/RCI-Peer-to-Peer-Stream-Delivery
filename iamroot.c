@@ -732,33 +732,42 @@ int main(int argc, char const *argv[]) {
                                 printf("Received a TREE_REPLY\n");
                                 printf("recebi um %s \n", clients.buffer[i]);
 
-                                int newLine = 0;
+                                int doubleNewLine = 0;
                                 // Found a complete message
-                                if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
+                                if((doubleNewLine = findsDoubleNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0) {
                                     // checks if both informations are contained there
                                     printf("sim entrei \n");
-                                    if(sscanf(&clients.buffer[i][3],"%[^:]:%[^ ] %[^\n]\n", TRip, TRport, TRtcpsessions) == 3) {
-                                        int c;
-                                        // Counts how many connections has received -- searchs for the two \n
-                                        for (c = 0; (newLine = findsNewLine(&clients.buffer[i][newLine + 1], PACKAGE_TCP)) == 0 && c < atoi(TRtcpsessions) + 1; ++c);
-
-                                        if(c == atoi(TRtcpsessions)) {
-
-                                        }
-                                        if(root) {
-                                            
-                                        }
-                                        else {
-                                            newAction = 0;
-                                        }
+                                    if(root) {
+                                        int newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP);
+                                        // prints the content of the message
+                                        if(sscanf(&clients.buffer[i][3],"%[^:]:%[^ ] %[^\n]\n", TRip, TRport, TRtcpsessions) == 3) {
+                                            printf("%s:%s (%s", TRip, TRport, TRtcpsessions);
+                                            for(newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP); newLine = doubleNewLine; newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) {
+                                                if(sscanf(&clients.buffer[i][newLine+3],"%[^:]:%[^\n]\n", TRip, TRport) == 2) {
+                                                    printf(" %s:%s", TRip, TRport);
+                                                    // Sends the message of TREE QUERY to discover the suns of the sun
+                                                    TREE_QUERY(clients.fd[i], TRip, TRport);
+                                                }
+                                                else
+                                                    break;
+                                            }
+                                            printf(")\n");
+                                        }    
                                         memset(TRip, '\0', BUFFER_SIZE);
                                         memset(TRport, '\0', BUFFER_SIZE);
                                         memset(TRtcpsessions, '\0', BUFFER_SIZE);
                                     }
+                                    else {
+                                        // Reenvia a mensagem para cima
+                                        if(writeTcp(fdUp, clients.buffer[i], doubleNewLine + 1) == -1) {
+                                            // CHAMAR WHO IS ROOT
+                                        }
+                                    }
+
                                     // checks if there is another message
-                                    if(clients.buffer[i][newLine + 1] != '\0') {
+                                    if(clients.buffer[i][doubleNewLine + 1] != '\0') {
                                         // Copies the buffer to the beggining
-                                        strcpy(clients.buffer[i], &clients.buffer[i][newLine + 1]);
+                                        strcpy(clients.buffer[i], &clients.buffer[i][doubleNewLine + 1]);
                                     }
                                     // There's no more messages
                                     else {
