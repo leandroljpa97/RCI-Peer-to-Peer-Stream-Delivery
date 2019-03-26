@@ -63,26 +63,20 @@ int connectToTcp(char _availableIAmRootIP[], char _availableIAmRootPort[]) {
 
     int n = getaddrinfo(_availableIAmRootIP, _availableIAmRootPort, &hints, &res_tcp);
     if(n != 0) {
-        if(status == DAD_LOST)
-            return -1;
         printf("error getaddrinfo in TCP source server  2\n");
-        exit(1);
+        return -1;
      }
 
     int fdUp = socket((res_tcp)->ai_family, (res_tcp)->ai_socktype, (res_tcp)->ai_protocol);
     if(fdUp == -1 ) {
-        if(status == DAD_LOST)
-            return -1;
         printf("error creating TCP socket TCP to source server...2. \n ");
-        exit(1);
+        return -1;
     }
 
     n = connect(fdUp, (res_tcp)->ai_addr, (res_tcp)->ai_addrlen);
     if(n == -1 ) {
-        if(status == DAD_LOST)
-            return -1;
         printf("error in connect with TCP socket TCP in source.... 2 \n ");
-        exit(1);
+        return -1;
     }
 
     printf("o fd depois do tcp é : %d \n", fdUp);

@@ -6,8 +6,10 @@
 
 
 #define TRIES 3
-#define TIMEOUT 10
-#define TIMEOUT_REMOVE 5
+#define TRIES_AP 5
+
+#define TIMEOUT 5
+#define TIMEOUT_REMOVE 1
 
 #define BUFFER_SIZE 256
 #define PACKAGETCP 65544
@@ -74,6 +76,14 @@ extern uint16_t queryId ;
 
 extern int status;
 
+extern int broken;
+
+extern int ascii;
+
+extern char availableIAmRootIP[IP_SIZE];
+extern char availableIAmRootPort[BUFFER_SIZE];
+
+
 
 
 void error_confirmation(char*s);
@@ -116,6 +126,8 @@ int findsNewLine(char *buffer, int size);
 int findsDoubleNewLine(char *buffer, int size);
 
 int getIndexChild(int _index);
+
+void AsciiToHex(char dataIn[], char dataOut[]);
 
 
 #endif

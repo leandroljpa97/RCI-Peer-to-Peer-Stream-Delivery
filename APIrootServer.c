@@ -52,6 +52,7 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
     status = DAD_LOST;
     close(*_fdUp);
     *_fdUp = -1;
+    broken = 1;
 
     for(int j = 0; j < tcpsessions; j++)
         if(clients.fd[j] != 0)
@@ -59,14 +60,14 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
                 removeChild(j);
 
 
-    WHOISROOT(_root,_fdAccessServer,_fdUp);
-    if(*_fdUp == -1){
+    if(WHOISROOT(_root,_fdAccessServer,_fdUp)== -2){
         printf("My dad did not do REMOVE() \n");
         REMOVE();
         WHOISROOT(_root,_fdAccessServer,_fdUp);
         status = NORMAL;
     }
     printf("Stream recovered. Enjoy it \n");
+    broken = 0;
 
     for(int j = 0; j < tcpsessions; j++)
         if(clients.fd[j] != 0)
@@ -129,7 +130,7 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
         perror("Error POPREQ"); 
         freeaddrinfo(res);
         close(fd);
-        return 0;
+        return -2;
     }
 
     printf("POPREQ msg sent \n");
@@ -241,7 +242,8 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         tries++;
     } while(counter < 1 && tries < TRIES);
 
-    if(tries >= TRIES) {
+
+    if(tries >= TRIES && counter < 1) {
         // FUNCTION TO TURN OFF EVERYTHING
         perror("Error wgo is root"); 
         freeaddrinfo(res);
@@ -274,12 +276,38 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         // and needs to go to the access server to acquire the correct IP and port
         else if(!strcmp(action, "ROOTIS")){                    
             *root = 0;
+            int reps = 0;
 
-            char availableIAmRootIP[IP_SIZE], availableIAmRootPort[BUFFER_SIZE];
+            availableIAmRootIP[0] = '\0';
+            availableIAmRootPort[0] = '\0';
 
-            // Communicates with access server to understand to where to connect                
-            findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort);   
-            *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
+            // Communicates with access server to understand to where to connect 
+            do{   
+                        
+                if((findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == -2)){
+                    if(status == DAD_LOST)
+                        return -2;
+
+                    else {
+                        printf("i will do again whoIsRoot \n");
+                        WHOISROOT(root,fdAccessServer, fdUp);
+                        break;
+                    }
+                }
+
+                if(strcmp(availableIAmRootIP,ipaddr)== 0 && strcmp(availableIAmRootPort,tport)==0)
+                    printf(" access server gave my ip and port \n");
+                else
+                    *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
+
+                reps ++;
+                printf(" i tryed 3 times with different access Points and nothing \n");
+            } while(*fdUp == -1 && reps < TRIES_AP);
+
+            if(reps >= TRIES_AP && *fdUp == -1){
+                printf("I tried 3 times to get an access point and nothing \n");
+                exit(1);
+            }
 
         }
         else if(!strcmp(action, "ERROR")) {
@@ -469,7 +497,7 @@ int DUMP() {
         tries++;
     } while(counter < 1 && tries < TRIES);
 
-    if(tries >= TRIES) {
+    if(tries >= TRIES && counter < 1) {
         // FUNCTION TO TURN OFF EVERYTHING
         perror("Error DUMP"); 
         freeaddrinfo(res);

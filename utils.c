@@ -44,8 +44,16 @@ uint16_t queryId = 0;
 char ipAccessPoint[];
 char portAccessPoint[];
 
+
 int status = NORMAL;
 
+//check if stream is broken
+int broken = 0;
+
+int ascii = 1;
+
+char availableIAmRootIP[IP_SIZE];
+char availableIAmRootPort[BUFFER_SIZE];
 
 
 
@@ -265,6 +273,9 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
         }
         else if(strcmp(argv[i], "-h") == 0) {
             printf("Command line commands:\n");
+             printf("iamroot [<streamID>] [-i <ipaddr>] [-t <tport>] [-u <uport>] \n[-s <rsaddr>[:<rsport>]]\n[-p <tcpsessions>]\n[-n <bestpops>] [-x <tsecs>]\n[-b] [-d] [-h] \n");
+
+            
             exit(0);
         }
         else {
@@ -336,3 +347,17 @@ int getIndexChild(int _index){
    
 }
 
+
+void AsciiToHex(char dataIn[], char dataOut[]){
+    int i, len;
+
+ 
+    len = strlen(dataIn);
+    if(dataIn[len-1]=='\n')
+        dataIn[--len] = '\0';
+
+    for(i = 0; i<len; i++){
+        sprintf(dataOut+i*2, "%02X", dataIn[i]);
+    }
+    
+}

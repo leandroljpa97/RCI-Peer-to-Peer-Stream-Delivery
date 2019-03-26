@@ -28,6 +28,7 @@ COMMENTS
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h> 
 
 #define PACKAGE_UDP 128
 #define PACKAGE_TCP 128
@@ -38,8 +39,16 @@ COMMENTS
 
 
 void interpRootServerMsg(char _data[]) {
-    char content[50];
-    int flag = sscanf(_data, "%s", content);
+    printf("data: %s \n",_data);
+    char contentAux[100], content[100];
+    int flag = sscanf(_data, "%[^\n]\n", contentAux);
+    printf("contAux %s \n",contentAux);
+
+    for(int i = 0; i< strlen(contentAux) ; i++)
+        content[i] = tolower(contentAux[i]);
+    content[strlen(contentAux)] = '\0';
+    printf(".... %s \n",content);
+
     printf(" a mensagem vinda do stdi  é: %s \n",content);
     if (flag < 0){
         printf("Error reading stdin. Exit(0) the program\n");   
@@ -48,44 +57,75 @@ void interpRootServerMsg(char _data[]) {
         if(!strcmp(content,"streams")) {
             DUMP();
         }
-        else if(!strcmp(content,"state")){
-            printf("presses state \n");
+        else if(!strcmp(content,"status")){
+            printf("presses status \n");
+            printf("stream identification: %s \n", streamId);
+
+            if(broken)
+                printf("Stream broken \n");
+            else 
+                printf("Stream not broken \n");
+
+            if(root){
+                printf("Is this app root?: YES \n");
+                printf("Access Server IP:%s and Port: %s \n", ipaddr, uport);
+            }
+            else{
+                printf("Is this app root?: NO \n");
+                printf("My dad IP: %s and Port: %s \n", availableIAmRootIP, availableIAmRootPort);
+            }
+            printf("Access Point IP: %s and Port: %s \n", ipaddr, tport);
+            printf("tcp sessions: %d, available tcp sessions: %d \n", tcpsessions, clients.available);
+
+            //FALTA O ULTIMO PONTO!!
 
         }
         else if(!strcmp(content,"display on")){
             printf("pressed display on \n");
+            dataStream = 1;
 
         }
         else if(!strcmp(content,"display off")){
             printf("pressed display off \n");
+            dataStream = 0;
 
         }
         else if(!strcmp(content,"format ascii")){
             printf("pressed ascii \n");
+            ascii = 1;
         }
         else if(!strcmp(content,"format hex")){
-            printf("pressed display on \n");
+            printf("pressed format hex \n");
+            ascii = 0;
 
         }
         else if(!strcmp(content,"debug on")){
             printf("pressed debug on \n");
+            debug = 1;
+            printf(" Esta aplicação destina-se a blablabalbalbalbal \n");
 
         }
         else if(!strcmp(content,"debug off")){
             printf("pressed debug off \n");
+            debug = 0;
 
         }
         else if(!strcmp(content,"tree")){
-            printf("pressed tree \n");
-            printf("%s\n", streamId);
-            printf("%s:%s (%d", ipaddr, tport, tcpsessions);
-            for (int i = 0; i < tcpsessions; ++i) {
-                if(clients.fd[i] != 0) {
-                    printf(" %s:%s", clients.ip[i], clients.port[i]);
-                    TREE_QUERY(clients.fd[i], clients.ip[i], clients.port[i]);
+
+            if(root){
+                printf("pressed tree \n");
+                printf("%s\n", streamId);
+                printf("%s:%s (%d", ipaddr, tport, tcpsessions);
+                for (int i = 0; i < tcpsessions; ++i) {
+                    if(clients.fd[i] != 0) {
+                        printf(" %s:%s", clients.ip[i], clients.port[i]);
+                        TREE_QUERY(clients.fd[i], clients.ip[i], clients.port[i]);
+                    }
                 }
-            }
-            printf(")\n");
+                printf(")\n");
+             }
+             else
+                printf("you are not Root. YOu can not do TREE_QUERY \n");
 
         }
         else if(!strcmp(content,"exit")){
@@ -128,6 +168,9 @@ int main(int argc, char const *argv[]) {
     // receive information from dad
     char bufferUp[PACKAGETCP];
     memset(bufferUp, '\0', PACKAGETCP);
+    
+    char bufferHex[PACKAGETCP];
+    memset(bufferHex, '\0', PACKAGETCP);
 
     char sizeStream[BUFFER_SIZE];
     char idStream[BUFFER_SIZE];
@@ -291,7 +334,17 @@ int main(int argc, char const *argv[]) {
 
                     }
 
-                    printf("o buffer tcp é: %s \n", bufferUp);
+                    if(dataStream){
+                        if(ascii){
+                            printf("o buffer tcp é: %s \n", bufferUp);
+                        }
+                        else {
+                            AsciiToHex(bufferUp,bufferHex);
+                            printf("o buffer tcp é: %s \n", bufferHex);
+
+                        }
+
+                    }
                     // Analise client list and send message
                     for (int i = 0; i < tcpsessions; ++i){
                         if(clients.fd[i] != 0) {
@@ -302,6 +355,7 @@ int main(int argc, char const *argv[]) {
                         }
                     }
                     bufferUp[0] = '\0';
+                    bufferHex[0] = '\0';
                 }
                 else if(!root){
                     printf("i received from my dad \n");
@@ -313,15 +367,24 @@ int main(int argc, char const *argv[]) {
                         continue;
                     }
 
-                    printf("bufferUp %s\n", bufferUp);
 
                     int newAction = 1;
                     while(newAction == 1) {
                         printf("action: %c%c\n", bufferUp[0], bufferUp[1]);
 
                         if(bufferUp[0] == 'D' && bufferUp[1] == 'A') {
-                            printf("I received DATA\n");  
-                            printf("bufferUp %s \n", bufferUp);     
+                            printf("I received DATA\n"); 
+
+                            if(dataStream) {
+                                if(ascii){
+                                    printf("o buffer tcp é: %s \n", bufferUp);
+                                }
+                                else {
+                                    AsciiToHex(bufferUp,bufferHex);
+                                    printf("o buffer tcp é: %s \n", bufferHex);
+
+                                }
+                            }
                             // Copies the amount of bytes that will receive in 4 hex digits
                             strncpy(sizeStream, &bufferUp[3], TCP_MESSAGE_SIZE);
 
@@ -347,6 +410,8 @@ int main(int argc, char const *argv[]) {
                                 else {
                                     // Clears the bufferUp string, since it's jobs is done
                                     memset(bufferUp, '\0', PACKAGE_TCP);
+                                    memset(bufferHex, '\0', PACKAGE_TCP);
+
                                     newAction = 0;
                                 } 
 
@@ -456,6 +521,7 @@ int main(int argc, char const *argv[]) {
                         }
                         else if(bufferUp[0] == 'B' && bufferUp[1] == 'S'){
                             int newLine = 0;
+                            broken = 1;
 
                             printf("Stream Stop .. Wait a moment! \n");
 
@@ -485,6 +551,7 @@ int main(int argc, char const *argv[]) {
                         }
                         else if(bufferUp[0] == 'S' && bufferUp[1] == 'F'){
                             int newLine = 0;
+                            broken = 0;
 
                             printf("Stream recovered. Enjoy it \n");
 
