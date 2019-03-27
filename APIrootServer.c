@@ -295,10 +295,26 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
                     }
                 }
 
-                if(strcmp(availableIAmRootIP,ipaddr)== 0 && strcmp(availableIAmRootPort,tport)==0)
+                if(strcmp(availableIAmRootIP,ipaddr)== 0 && strcmp(availableIAmRootPort,tport)==0){
+                    reps ++;
+                    continue;
                     printf(" access server gave my ip and port \n");
-                else
-                    *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
+                }
+
+                for(int j = 0; j < tcpsessions; j++){
+                    if(clients.fd[j] != 0){
+                        if(strcmp(availableIAmRootIP, clients.ip[j]) == 0 && strcmp(availableIAmRootPort, clients.port[j]) == 0 ){
+                            reps ++;
+                            continue;
+                            printf(" access server gave ip and port of my childreen \n"); 
+                        }
+                    }
+
+                }
+
+                
+                
+                *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
 
                 reps ++;
                 printf(" i tryed 3 times with different access Points and nothing \n");
@@ -344,7 +360,7 @@ int WHOISROOTwithoutResponse() {
     strcat(buffer, uport);
     strcat(buffer, "\n");
 
-    printf("WHOISROOT periódico: %s\n", buffer);
+    //printf("WHOISROOT periódico: %s\n", buffer);
 
     // finds the size of the WHOISROOT message
     int i = 0;

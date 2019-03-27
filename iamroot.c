@@ -75,9 +75,13 @@ void interpRootServerMsg(char _data[]) {
                 printf("My dad IP: %s and Port: %s \n", availableIAmRootIP, availableIAmRootPort);
             }
             printf("Access Point IP: %s and Port: %s \n", ipaddr, tport);
-            printf("tcp sessions: %d, available tcp sessions: %d \n", tcpsessions, clients.available);
+            printf("Access Points of downstream points - Ip:Port \n");
+            for(int j = 0; j < tcpsessions; j++){
+                if(clients.fd[j] != 0)
+                    printf(" %s:%s \n", clients.ip[j], clients.port[j]);
 
-            //FALTA O ULTIMO PONTO!!
+            }
+
 
         }
         else if(!strcmp(content,"display on")){
@@ -102,7 +106,6 @@ void interpRootServerMsg(char _data[]) {
         else if(!strcmp(content,"debug on")){
             printf("pressed debug on \n");
             debug = 1;
-            printf(" Esta aplicação destina-se a blablabalbalbalbal \n");
 
         }
         else if(!strcmp(content,"debug off")){
@@ -260,10 +263,10 @@ int main(int argc, char const *argv[]) {
             // Time variables
             t1 = NULL;
             t2.tv_usec = 0;
-            t2.tv_sec = TIMEOUT;
+            t2.tv_sec = tsecs;
             t1 = &t2;
 
-            if(WHOISROOTwithoutResponse() == 0) {
+            if(root && (WHOISROOTwithoutResponse() == 0)) {
                 printf("Unable to make WHO IS ROOT periódico\n");
             }
             
@@ -519,6 +522,54 @@ int main(int argc, char const *argv[]) {
                                 newAction = 0;
                             }
                         }
+
+                        else if(bufferUp[0] == 'R' && bufferUp[1] == 'E'){
+                            printf("I received a POP_QUERYclients\n");
+                            int newLine = 0;
+                            // Found a complete message
+                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                // checks if both informations are contained there
+                                if(sscanf(&bufferUp[3], "%[^:]:%[^\n]\n", availableIAmRootIP, availableIAmRootPort) == 2) {
+                                    printf("availableIAmRootIP: %s -availableIAmRootPort: %s\n", availableIAmRootIP, availableIAmRootPort);
+                                    close(fdUp);
+                                    fdUp = -1;
+
+                                    int tries = 0;
+
+                                    do{
+                                         fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
+                                         if(fdUp == -1)
+                                            WHOISROOT(&root, &fdAccessServer, &fdUp);
+                                        tries++;
+                                        
+                                    }while(fdUp == -1 && tries < TRIES);
+
+
+                                    
+                                    // Clears the idStram string, since it's jobs is done
+                                    memset(availableIAmRootIP, '\0', IP_SIZE);
+                                    memset(availableIAmRootPort, '\0', BUFFER_SIZE);
+                                }
+
+                                // checks if there is another message
+                                if(bufferUp[newLine + 1] != '\0') {
+                                    // Copies the buffer to the beggining
+                                    strcpy(bufferUp, &bufferUp[newLine + 1]);
+                                }
+                                // There's no more messages
+                                else {
+                                    newAction = 0;
+                                    memset(bufferUp, '\0', PACKAGE_TCP);
+                                }
+                            }
+                            // The data is not complete
+                            else {
+                                newAction = 0;
+                            }
+
+
+                        }
+
                         else if(bufferUp[0] == 'B' && bufferUp[1] == 'S'){
                             int newLine = 0;
                             broken = 1;
@@ -873,6 +924,7 @@ int main(int argc, char const *argv[]) {
                         } 
                     }
                 }
+                printListCLient();
             }
             else {
                 printf("I received something, but didn't read the message\n");

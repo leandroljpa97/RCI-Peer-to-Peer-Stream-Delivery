@@ -281,3 +281,21 @@ void removeNode(char * ip, char *port){
 
 }
 
+
+void printListCLient(){
+    clientList_t *myNode = accessPoints;
+
+    while(myNode != NULL){
+        printf("myNode ->ip: %s, myNode ->port: %s, bestpops:%d \n",myNode->ip, myNode->port, myNode->bestpops);
+        myNode = myNode ->next;
+    }
+}
+
+void printListQId(){
+   queryIDList_t *aux = queryIDList;
+
+    while(aux != NULL){
+        printf(" queryId: %s, left %d \n",aux->queryID, aux->left);
+        aux = aux ->next;
+    }
+}
