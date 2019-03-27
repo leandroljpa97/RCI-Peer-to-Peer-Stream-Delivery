@@ -22,6 +22,24 @@ queryIDList_t *queryIDList;
 clientList_t *currentClientAP;
 
 
+void insertQueryIDroot(int _queryID, int _left) {
+    queryIDList_t *temp_node = (queryIDList_t *) malloc(sizeof(queryIDList_t));
+    if(temp_node == NULL) {
+        printf("Error malloc\n");
+        exit(0);
+    }
+
+    char queryIDHex[] = "0000";
+
+    convertNumDoHex(queryIDHex, _queryID);
+
+    strcpy(temp_node->queryID, queryIDHex);
+    temp_node->left = _left;
+
+    temp_node->next = queryIDList;
+    queryIDList = temp_node;
+}
+
 
 void insertQueryID(char _queryID[], int _left) {
     queryIDList_t *temp_node = (queryIDList_t *) malloc(sizeof(queryIDList_t));
@@ -283,19 +301,24 @@ void removeNode(char * ip, char *port){
 
 
 void printListCLient(){
+
+    printf("NEW LIST \n");
     clientList_t *myNode = accessPoints;
 
     while(myNode != NULL){
         printf("myNode ->ip: %s, myNode ->port: %s, bestpops:%d \n",myNode->ip, myNode->port, myNode->bestpops);
         myNode = myNode ->next;
     }
+        printf("END LIST \n");
+
 }
 
 void printListQId(){
    queryIDList_t *aux = queryIDList;
-
+   printf("QUERY ID LIST\n");
     while(aux != NULL){
         printf(" queryId: %s, left %d \n",aux->queryID, aux->left);
         aux = aux ->next;
     }
+    printf("QUERY ID LIST END\n");
 }

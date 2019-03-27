@@ -27,6 +27,7 @@ typedef struct _clientList {
 extern clientList_t *accessPoints;
 extern queryIDList_t *queryIDList;
 
+void insertQueryIDroot(int _queryID, int _left);
 
 void insertQueryID(char _queryID[], int _left);
 

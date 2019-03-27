@@ -216,7 +216,7 @@ int main(int argc, char const *argv[]) {
     // Time variables
     t1 = NULL;
     t2.tv_usec = 0;
-    t2.tv_sec = TIMEOUT;
+    t2.tv_sec = tsecs;
     t1 = &t2;
 
     while(1) {
@@ -242,6 +242,9 @@ int main(int argc, char const *argv[]) {
             }
         }
 
+        if(root)
+            printListCLient();
+
         
 
         // Monitor all the file descritors to check for new inputs
@@ -266,10 +269,20 @@ int main(int argc, char const *argv[]) {
             t2.tv_sec = tsecs;
             t1 = &t2;
 
-            if(root && (WHOISROOTwithoutResponse() == 0)) {
-                printf("Unable to make WHO IS ROOT periódico\n");
+            if(root) {
+                if(WHOISROOTwithoutResponse() == 0)
+                    printf("Unable to make WHO IS ROOT periódico\n");
+                
+                // Run the list of clients to send the message to search for more bestpops left
+                queryId++;
+                for(int j = 0; j < tcpsessions; j++){
+                    if(clients.fd[j] != 0)
+                        if(!POP_QUERYroot(clients.fd[j], queryId, bestpops))
+                            removeChild(j);
+                }
+                // Insert the pending request bestpops
+                insertQueryIDroot(queryIdAux, bestpops);
             }
-            
         }
         else {
         	// Checks if something was written on the standart input
@@ -296,6 +309,7 @@ int main(int argc, char const *argv[]) {
 
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
                     printf("RECEIVED A POPREQ\n");
+                    printf("clients.available na root %d\n", clients.available);
                     // If root has available connection, allow connection to itself
                     if(clients.available > 0) {
                         // Sends POPRESP with IP and Port to connect to itself
@@ -312,6 +326,7 @@ int main(int argc, char const *argv[]) {
                         // Needs to find new AP to the list
                         if(findAP == 1) {
                             queryId++;
+                            insertQueryIDroot(queryId, bestpops);
                             for(int i = 0; i < tcpsessions; i++)
                                 if(!POP_QUERYroot(clients.fd[i], queryId, bestpops))
                                     removeChild(i);
@@ -469,6 +484,9 @@ int main(int argc, char const *argv[]) {
                                 if(sscanf(&bufferUp[3], "%[^ ] %[^\n]\n", queryIdAux, bestpopsAux) == 2) {
                                     printf("queryIdAux: %s\nbestpopsAux: %s\n", queryIdAux, bestpopsAux);
 
+                                    printf("clients.available !! %d\n", clients.available);
+
+
                                     // Proccess the POP_QUERY
                                     if(clients.available > 0) {
                                         // If the iam has available tcp but not enough to cover the request.
@@ -479,7 +497,6 @@ int main(int argc, char const *argv[]) {
                                                  continue;
 
                                             }
-
                                             else{
                                                 // Run the list of clients to send the message to search for more bestpops left
                                                 for(int j = 0; j < tcpsessions; j++){
@@ -500,6 +517,17 @@ int main(int argc, char const *argv[]) {
 
                                             }
                                         }
+                                    }
+                                    else{
+                                         // Run the list of clients to send the message to search for more bestpops left
+                                        for(int j = 0; j < tcpsessions; j++){
+                                            if(clients.fd[j] != 0)
+                                                if(!POP_QUERYclients(clients.fd[j], queryIdAux, atoi(bestpopsAux)))
+                                                    removeChild(j);
+                                        }
+                                        // Insert the pending request bestpops
+                                        insertQueryID(queryIdAux, atoi(bestpopsAux) - clients.available);
+
                                     }
                                     // Clears the idStram string, since it's jobs is done
                                     memset(queryIdAux, '\0', BUFFER_SIZE);
@@ -541,7 +569,7 @@ int main(int argc, char const *argv[]) {
                                          if(fdUp == -1)
                                             WHOISROOT(&root, &fdAccessServer, &fdUp);
                                         tries++;
-                                        
+
                                     }while(fdUp == -1 && tries < TRIES);
 
 
@@ -791,7 +819,7 @@ int main(int argc, char const *argv[]) {
                                             printf("Port2 %s \n", queryIdAux);
 
 
-
+                                        printListQId();
                                         // When it's root, insert the number of tcp sessions that the iamroot is able to have
                                         if(root){
                                             // Finds how many bestpops are still to find to that queryID
@@ -826,23 +854,20 @@ int main(int argc, char const *argv[]) {
                                                 availsSend = n;
 
                                             if(availsSend != 0){
-
                                                 if(!POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend)){                                            
                                                     deleteQueryID(queryIdAux);
                                                     DadLeft(&root, &fdAccessServer, &fdUp);
                                                     continue;
                                                 }
-
                                                 else{
-
                                                     for(int j = 0; j < availsSend; j++)
                                                         decrementQueryID(queryIdAux);
-
                                                 }
-
-                                                
                                             }
                                         }
+
+                                        printListQId();
+
                                         memset(newPopPort, '\0', BUFFER_SIZE);
                                         memset(avails, '\0', BUFFER_SIZE);
                                         memset(newPopIp, '\0', BUFFER_SIZE);
@@ -924,7 +949,11 @@ int main(int argc, char const *argv[]) {
                         } 
                     }
                 }
-                printListCLient();
+
+                if(root)
+                    printListCLient();
+
+                
             }
             else {
                 printf("I received something, but didn't read the message\n");
