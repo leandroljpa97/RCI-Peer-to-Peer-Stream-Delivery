@@ -644,13 +644,8 @@ int main(int argc, char const *argv[]) {
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
 
-                                if(status == CONFIRMATION){
-                                    for(int j = 0; j < tcpsessions; j++)
-                                        if(clients.fd[j] != 0)
-                                            if(!STREAM_FLOWING(clients.fd[j]))
-                                                removeChild(j);
+                                if(status == CONFIRMATION)
                                     status = NORMAL;
-                                }
 
                                
                                 for(int j = 0; j < tcpsessions; j++)
