@@ -64,15 +64,21 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
         printf("My dad did not do REMOVE() \n");
         REMOVE();
         WHOISROOT(_root,_fdAccessServer,_fdUp);
-        status = NORMAL;
     }
-    printf("Stream recovered. Enjoy it \n");
-    broken = 0;
 
-    for(int j = 0; j < tcpsessions; j++)
-        if(clients.fd[j] != 0)
-            if(!STREAM_FLOWING(clients.fd[j]))
-                removeChild(j);
+    if(root){
+        printf("Stream recovered. Enjoy it \n");
+        broken = 0;
+        status = NORMAL;
+
+        for(int j = 0; j < tcpsessions; j++)
+            if(clients.fd[j] != 0)
+                if(!STREAM_FLOWING(clients.fd[j]))
+                    removeChild(j);
+    }
+    // in the case of status confirmaion, i have to receive a STREAM FLOWING TO KNOW that its ok to pass to normal state
+    else
+        status = CONFIRMATION;
 }
 
 int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAmRootIP[] , char _availableIAmRootPort[]){
@@ -317,7 +323,6 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
                 *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
 
                 reps ++;
-                printf(" i tryed 3 times with different access Points and nothing \n");
             } while(*fdUp == -1 && reps < TRIES_AP);
 
             if(reps >= TRIES_AP && *fdUp == -1){

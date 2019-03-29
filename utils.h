@@ -33,6 +33,7 @@
 
 #define NORMAL 0
 #define DAD_LOST 1
+#define CONFIRMATION 2
 
 //use this structure to childreens of each iamRoot and in the case  of being root, to accessPoints
 typedef struct _clients {

@@ -275,13 +275,13 @@ int main(int argc, char const *argv[]) {
                 
                 // Run the list of clients to send the message to search for more bestpops left
                 queryId++;
-                for(int j = 0; j < tcpsessions; j++){
+                /*for(int j = 0; j < tcpsessions; j++){
                     if(clients.fd[j] != 0)
                         if(!POP_QUERYroot(clients.fd[j], queryId, bestpops))
                             removeChild(j);
-                }
+                } 
                 // Insert the pending request bestpops
-                insertQueryIDroot(queryIdAux, bestpops);
+                insertQueryIDroot(queryId, bestpops); */
             }
         }
         else {
@@ -606,6 +606,13 @@ int main(int argc, char const *argv[]) {
 
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+
+                                if(status == CONFIRMATION){
+                                    close(fdUp);
+                                    fdUp = -1;
+                                    DadLeft(&root, &fdAccessServer, &fdUp);
+                                    continue;
+                                }
                                
                                for(int j = 0; j < tcpsessions; j++)
                                     if(clients.fd[j] != 0)
@@ -636,6 +643,15 @@ int main(int argc, char const *argv[]) {
 
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+
+                                if(status == CONFIRMATION){
+                                    for(int j = 0; j < tcpsessions; j++)
+                                        if(clients.fd[j] != 0)
+                                            if(!STREAM_FLOWING(clients.fd[j]))
+                                                removeChild(j);
+                                    status = NORMAL;
+                                }
+
                                
                                 for(int j = 0; j < tcpsessions; j++)
                                     if(clients.fd[j] != 0)
@@ -777,6 +793,11 @@ int main(int argc, char const *argv[]) {
                                         // When its root, adds the new client to the list of AP - since it doesn't know how many tcpsessions it has, insert has 1 (default)
                                         if(root)
                                             insertAccessPoint(newPopIp, newPopPort, 1);
+
+                                        if(broken)
+                                            BROKEN_STREAM(clients.fd[i]);
+                                        else
+                                            STREAM_FLOWING(clients.fd[i]);
 
                                         printf(" clients.ip[i]:%s\n", clients.ip[i]);
                                         printf(" clients.port[i]:%s\n", clients.port[i]);

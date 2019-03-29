@@ -1,14 +1,3 @@
-# RCI-Peer-to-Peer-Stream-Delivery
-
-## DUVIDAS NOVAS
-
-na root so se acrescenta à lista de AP até best pops, ou mais em caso de uma pessoa encher mais do que é necesaio
-
-POR A SEGUIR AO READ <= 0
-
-
-
-
 
 
 
@@ -25,14 +14,38 @@ JA ESTA  A FUNCIONAR ISTO!! PARA TESTAR COMENTEI NA FUNÇAO DE CTR+C O (IF(ROOT)
 
 - acho que deviamos mudar todos os strcat para sprintf() como fiz no REMOVE.. NAO?
 
--Linha 262 do ficheiro APIROOTSERVER.c .. nao sei o que se faz nesse caso!!
-
--> experimenta ter a root com o ncat, filhos e mandar o servidor ncat a baixo!! ve se ta tudo ok nesse caso sff! (vai a baixo como e obvio mas as msgs que há.. ve sff)
 
 -> no ctr+c temos de dar close a todos os sockets nao?
 
--> fds tou-me a passar! quero mandar a root a baixo a ver o que acontece. mas smp que mando a root a baixo, o servidor fonte tambem vai a baixo com o ncat! lol (fiz com o do stor)
 
+## IMPORTANTE! A FAZER:
+------------------------------------------------------------------------------------
+->FAZER O DUMP BEM;
+
+->VERIFICAR OS READS!
+
+-> VER TREE QUERY!
+
+-> VER AS CENAS PERIODICAS COMO DEVE DE SER PARA DIFERNETES TIMERS
+
+-> VERIFICAR BEM SE OS CONTINUE'S NAO LIXAM NADA
+
+-> VER SE A LISTA DE QUERY IDs BEM COMO OS ACCESS POINTS TA A FUNCIONAR BEM (TA ALGO DE ESTRANHO!!)
+
+-> TIRAR PRINTS
+
+-> FAZER OS FREES NAS DEVIDAS ALTURAS
+
+-> FECHAR OS SOCKETS NAS DEVIDAS ALTURAS
+
+------------------------------------------------------------------
+
+## CASOS A TESTAR:
+-> FAZER CIRCULOS, SAIR UM GAJO A MEIO E ELE AO PEDIR UM PONTO DE ACESSO SER-LHE ATRIBUIDO UM PONTO DE ACESSO DE UM FILHO SEU OU NETO .., OU SER ATRIBUIDO UM QUE JA NAO EXISTE!
+
+-> VARIAS TCP SESSIONS
+
+-> 1 CASO: EU TINHA UMA LINHA COM 6 NÓS.  E BASICAMENTE EU TIREI O 3º NO! O SERVIDOR DE ACESSO SO TINHA O PTO DE ACESSO DO 2º NO, E COMO TAVA A FAZER PERIODICAMENTE POPQUERYS FICAVA SO COM ESSE NO!! O 4º NO FEZ PEDIDO PARA UM PONTO DE ACESSO E ERA -LHE ATRIBUIDO O 2º NO! NO ENTANTO DEVIDO AO PERIODO DO POPQUERY O 2º COMO TAVA SMP A RESPONDER A CENAS, O 4º NAO SE CONSEGUIA LIGAR AO 2º !! TEMOS DE METER UM PERIODO MAIOR!
 
 
 

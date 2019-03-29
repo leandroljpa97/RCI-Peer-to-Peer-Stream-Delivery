@@ -238,38 +238,44 @@ void deleteClientAP(clientList_t  *removeIP) {
 */
 int getAccessPoint(char *ip, char *port) {
     // Sends the information from the currentClientAP
-    strcpy(ip, currentClientAP->ip);
-    strcpy(port, currentClientAP->port);
 
-    clientList_t *aux = currentClientAP;
-    // Goes to the next client on the list
-    
-    if(currentClientAP->next != NULL)
-        currentClientAP = currentClientAP->next;
-    else
-        currentClientAP = accessPoints;
+    if(currentClientAP != NULL){
+        strcpy(ip, currentClientAP->ip);
+        strcpy(port, currentClientAP->port);
 
-    // When there's more AP than bestpops, decreses the number of bestpops of that AP or remove it from the list if there's no more positions
-    if(numberOfAP > bestpops) {
-        // Decreases the number of available connections for that AP
-        if(currentClientAP->bestpops > 1) {
-            currentClientAP->bestpops--;
+        clientList_t *aux = currentClientAP;
+        // Goes to the next client on the list
+        
+        if(currentClientAP->next != NULL)
+            currentClientAP = currentClientAP->next;
+        else
+            currentClientAP = accessPoints;
+
+        // When there's more AP than bestpops, decreses the number of bestpops of that AP or remove it from the list if there's no more positions
+        if(numberOfAP > bestpops) {
+            // Decreases the number of available connections for that AP
+            if(aux->bestpops > 1) {
+                aux->bestpops--;
+            }
+            else {
+                deleteClientAP(aux);
+            }
+            numberOfAP--;
         }
+        // When there's less or equal AP than bestpops, increases the negative variable
         else {
-            deleteClientAP(aux);
+            aux->negative++;
         }
-        numberOfAP--;
-    }
-    // When there's less or equal AP than bestpops, increases the negative variable
-    else {
-        currentClientAP->negative++;
-    }
 
-    // When there's only bestpops AP on the list, sends the information to do POP_QUERY
-    if(numberOfAP <= bestpops)
+        // When there's only bestpops AP on the list, sends the information to do POP_QUERY
+        if(numberOfAP < bestpops)
+            return 1;
+
+        return 0;
+
+    }
+    else
         return 1;
-
-    return 0;
 }
 
 void removeNode(char * ip, char *port){
