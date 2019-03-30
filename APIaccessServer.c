@@ -12,6 +12,7 @@
 
 #include "APIaccessServer.h"
 #include "utils.h"
+#include "list.h"
 #include "tcp.h"
 #include "udp.h"
 

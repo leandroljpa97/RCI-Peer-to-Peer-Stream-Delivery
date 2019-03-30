@@ -3,10 +3,6 @@
 
 /* ENTERING STREAM TREE */
 
-void removeChild(int index);
-
-void closeAllClients();
-
 int WELCOME(int _fd);
 
 int NEW_POP(int _fd);

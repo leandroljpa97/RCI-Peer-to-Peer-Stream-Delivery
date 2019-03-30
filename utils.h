@@ -89,6 +89,7 @@ extern char availableIAmRootPort[BUFFER_SIZE];
 
 void error_confirmation(char*s);
 
+void AsciiToHex(char dataIn[], char dataOut[]);
 
 /* CLIENT STRUCTURE FUNCTIONS */
 
@@ -96,15 +97,13 @@ void initClientStructure();
 
 void addClient(int _fd, char _ip[], char _port[]);
 
-void deleteClient(int _fd);
-
 int insertFdClient(int _newfd);
 
 int deleteFdClient(int _delfd); 
 
+int getIndexChild(int _index);
 
-void clearClientStructure();
-
+void clearClientStructure();	
 
 void convertNumDoHex(char *nbytesHex, int num);
 
@@ -126,9 +125,6 @@ int findsNewLine(char *buffer, int size);
 
 int findsDoubleNewLine(char *buffer, int size);
 
-int getIndexChild(int _index);
-
-void AsciiToHex(char dataIn[], char dataOut[]);
 
 
 #endif

@@ -42,12 +42,10 @@ void interpRootServerMsg(char _data[]) {
     printf("data: %s \n",_data);
     char contentAux[100], content[100];
     int flag = sscanf(_data, "%[^\n]\n", contentAux);
-    printf("contAux %s \n",contentAux);
 
     for(int i = 0; i< strlen(contentAux) ; i++)
         content[i] = tolower(contentAux[i]);
     content[strlen(contentAux)] = '\0';
-    printf(".... %s \n",content);
 
     printf(" a mensagem vinda do stdi  é: %s \n",content);
     if (flag < 0){
@@ -128,7 +126,7 @@ void interpRootServerMsg(char _data[]) {
                 printf(")\n");
              }
              else
-                printf("you are not Root. YOu can not do TREE_QUERY \n");
+                printf("you are not Root. Cannot do TREE_QUERY \n");
 
         }
         else if(!strcmp(content,"exit")){
@@ -167,6 +165,9 @@ int main(int argc, char const *argv[]) {
 
     // indice to say who was the last child that i've redirect to
     int lastChild = -1;
+
+    // indicates the starting point to do periodic pop_query
+    int PeriodicPQ = 0;
 
     // receive information from dad
     char bufferUp[PACKAGETCP];
@@ -208,8 +209,6 @@ int main(int argc, char const *argv[]) {
 
     WHOISROOT(&root, &fdAccessServer, &fdUp);
 
-    printf("fiz WHOISROOT\n");
-
     // Create TCP Server
     fdDown = createTcpServer();
 
@@ -242,8 +241,8 @@ int main(int argc, char const *argv[]) {
             }
         }
 
-        if(root)
-            printListCLient();
+        /*if(root)
+            printListCLient();*/
 
         
 
@@ -270,18 +269,35 @@ int main(int argc, char const *argv[]) {
             t1 = &t2;
 
             if(root) {
+                if(debug == 1)
+                    printf("timeout\n");
+
                 if(WHOISROOTwithoutResponse() == 0)
                     printf("Unable to make WHO IS ROOT periódico\n");
                 
                 // Run the list of clients to send the message to search for more bestpops left
-                queryId++;
-                /*for(int j = 0; j < tcpsessions; j++){
-                    if(clients.fd[j] != 0)
-                        if(!POP_QUERYroot(clients.fd[j], queryId, bestpops))
-                            removeChild(j);
-                } 
+                int POP_QUERYsent = 0;
+
+                int j = 0;
+                // To not do the POP_query always on the same order
+                while(j < tcpsessions) {
+                    if(clients.fd[PeriodicPQ] != 0) {
+                        printf("                    pop query %d\n", j);
+                        if(!POP_QUERYroot(clients.fd[PeriodicPQ], queryId, bestpops))
+                            deleteClient(clients.fd[PeriodicPQ]);
+                        POP_QUERYsent = 1;
+                    }
+                    if(PeriodicPQ < tcpsessions)
+                        PeriodicPQ++;
+                    else
+                        PeriodicPQ = 0;
+                    j++;
+                }
                 // Insert the pending request bestpops
-                insertQueryIDroot(queryId, bestpops); */
+                if(POP_QUERYsent) {
+                    insertQueryIDroot(queryId, bestpops);
+                    queryId++;
+                }
             }
         }
         else {
@@ -308,8 +324,11 @@ int main(int argc, char const *argv[]) {
                 receiveUdp(fdAccessServer, bufferAccessServer, BUFFER_SIZE, &addr);
 
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
-                    printf("RECEIVED A POPREQ\n");
+                    if(debug == 1)
+                        printf("RECEIVED A POPREQ\n");
+
                     printf("clients.available na root %d\n", clients.available);
+
                     // If root has available connection, allow connection to itself
                     if(clients.available > 0) {
                         // Sends POPRESP with IP and Port to connect to itself
@@ -326,10 +345,11 @@ int main(int argc, char const *argv[]) {
                         // Needs to find new AP to the list
                         if(findAP == 1) {
                             queryId++;
+                            printf("            POPREQ\n"); 
                             insertQueryIDroot(queryId, bestpops);
                             for(int i = 0; i < tcpsessions; i++)
                                 if(!POP_QUERYroot(clients.fd[i], queryId, bestpops))
-                                    removeChild(i);
+                                    deleteClient(clients.fd[i]);
                         }
                     }
                 }
@@ -345,11 +365,8 @@ int main(int argc, char const *argv[]) {
 
                     // Stream is left - the program needs to restart and try to reconect with the source again
                     if(n <= 0) {
-                        
                         REMOVE();
                         DadLeft(&root,&fdAccessServer,&fdUp);
-                        continue;
-
                     }
 
                     if(dataStream){
@@ -367,13 +384,13 @@ int main(int argc, char const *argv[]) {
                     for (int i = 0; i < tcpsessions; ++i){
                         if(clients.fd[i] != 0) {
                             if(!DATA(clients.fd[i], n, bufferUp)) {
-                                removeChild(i);
+                                deleteClient(clients.fd[i]);
                                 printf("Child gone\n");
                             }
                         }
                     }
-                    bufferUp[0] = '\0';
-                    bufferHex[0] = '\0';
+                    memset(bufferUp, '\0', PACKAGETCP);
+                    memset(bufferHex, '\0', PACKAGETCP);
                 }
                 else if(!root){
                     printf("i received from my dad \n");
@@ -382,9 +399,9 @@ int main(int argc, char const *argv[]) {
                     int n = readTcp(fdUp, bufferUp);
                     if(n <= 0)  {
                         DadLeft(&root,&fdAccessServer,&fdUp);
+                        memset(bufferUp, '\0', PACKAGETCP);
                         continue;
                     }
-
 
                     int newAction = 1;
                     while(newAction == 1) {
@@ -412,7 +429,7 @@ int main(int argc, char const *argv[]) {
                                 for (int i = 0; i < tcpsessions; ++i) {
                                     if(clients.fd[i] != 0) {
                                         if(!DATA(clients.fd[i], (int) strtol(sizeStream, NULL, 16), &bufferUp[8])) {
-                                            removeChild(i);
+                                            deleteClient(clients.fd[i]);
                                             printf("Child gone\n");
                                         }
                                     }
@@ -450,10 +467,9 @@ int main(int argc, char const *argv[]) {
 
                                 //in this case sizeId received is sizeStream
                                 if(strcmp(idStream, streamId) == 0) {
+                                    // Sends a new pop
                                     if(!NEW_POP(fdUp)){
-                                       DadLeft(&root, &fdAccessServer, &fdUp);
-                                        continue;
-
+                                        DadLeft(&root, &fdAccessServer, &fdUp);
                                     }
                                 }
                                 // Clears the idStram string, since it's jobs is done
@@ -494,27 +510,29 @@ int main(int argc, char const *argv[]) {
                                             if(!POP_REPLY(fdUp, queryIdAux, ipaddr, tport, clients.available)){
                                                 deleteQueryID(queryIdAux);
                                                 DadLeft(&root, &fdAccessServer, &fdUp);
-                                                 continue;
 
                                             }
                                             else{
                                                 // Run the list of clients to send the message to search for more bestpops left
-                                                for(int j = 0; j < tcpsessions; j++){
+                                                int j = 0;
+                                                while(j < tcpsessions) {
                                                     if(clients.fd[j] != 0)
                                                         if(!POP_QUERYclients(clients.fd[j], queryIdAux, atoi(bestpopsAux) - clients.available))
-                                                            removeChild(j);
+                                                            deleteClient(clients.fd[j]);
+                                                    if(PeriodicPQ < tcpsessions)
+                                                        PeriodicPQ++;
+                                                    else
+                                                        PeriodicPQ = 0;
+                                                    j++;
                                                 }
                                                 // Insert the pending request bestpops
                                                 insertQueryID(queryIdAux, atoi(bestpopsAux) - clients.available);
                                             }
                                         }
                                         else {
-
                                             if(!POP_REPLY(fdUp, queryIdAux, ipaddr, tport, atoi(bestpopsAux))){
                                                 deleteQueryID(queryIdAux);
                                                 DadLeft(&root, &fdAccessServer, &fdUp);
-                                                continue;
-
                                             }
                                         }
                                     }
@@ -523,7 +541,7 @@ int main(int argc, char const *argv[]) {
                                         for(int j = 0; j < tcpsessions; j++){
                                             if(clients.fd[j] != 0)
                                                 if(!POP_QUERYclients(clients.fd[j], queryIdAux, atoi(bestpopsAux)))
-                                                    removeChild(j);
+                                                    deleteClient(clients.fd[j]);
                                         }
                                         // Insert the pending request bestpops
                                         insertQueryID(queryIdAux, atoi(bestpopsAux) - clients.available);
@@ -552,7 +570,7 @@ int main(int argc, char const *argv[]) {
                         }
 
                         else if(bufferUp[0] == 'R' && bufferUp[1] == 'E'){
-                            printf("I received a POP_QUERYclients\n");
+                            printf("I received a REDIRECT\n");
                             int newLine = 0;
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
@@ -608,16 +626,16 @@ int main(int argc, char const *argv[]) {
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
 
                                 if(status == CONFIRMATION){
+                                    printf("\nSTATUS CONFIRMATION\n");
                                     close(fdUp);
                                     fdUp = -1;
                                     DadLeft(&root, &fdAccessServer, &fdUp);
-                                    continue;
                                 }
                                
                                for(int j = 0; j < tcpsessions; j++)
                                     if(clients.fd[j] != 0)
                                         if(!BROKEN_STREAM(clients.fd[j]))
-                                            removeChild(j);
+                                            deleteClient(clients.fd[j]);
 
                                 // checks if there is another message
                                 if(bufferUp[newLine + 1] != '\0') {
@@ -651,7 +669,7 @@ int main(int argc, char const *argv[]) {
                                 for(int j = 0; j < tcpsessions; j++)
                                     if(clients.fd[j] != 0)
                                         if(!STREAM_FLOWING(clients.fd[j]))
-                                            removeChild(j);
+                                            deleteClient(clients.fd[j]);
 
                                 // checks if there is another message
                                 if(bufferUp[newLine + 1] != '\0') {
@@ -692,7 +710,7 @@ int main(int argc, char const *argv[]) {
                                         for(int j = 0; j < tcpsessions; j++)
                                             if(clients.fd[j] != 0)
                                                 if(writeTcp(clients.fd[j], bufferUp, newLine + 1) != newLine + 1)
-                                                    removeChild(j);
+                                                    deleteClient(clients.fd[j]);
                                     }
                                     // Clears the idStram string, since it's jobs is done
                                     memset(TQip, '\0', BUFFER_SIZE);
@@ -719,7 +737,7 @@ int main(int argc, char const *argv[]) {
             }
             // When receives a new client, performs accept
             else if(fdDown != -1 && FD_ISSET(fdDown,&fd_sockets)){
-                printf("received newClient \n");
+                printf("Received New Client \n");
 
                 // Variables to accept new clients
                 int newfd = -1;
@@ -730,49 +748,58 @@ int main(int argc, char const *argv[]) {
                     printf("Error while accepting new client\n");
                     exit(1);
                 }
+
+                // If I have open conections, let it connect to me
                 if(clients.available > 0){
                     if(insertFdClient(newfd)) {
                         // Sends the welcome message to the new client
                         if(!WELCOME(newfd)) {
                             deleteFdClient(newfd);
                         }
-                        printf("mandei um welcome \n");
+                        printf("WELCOME Sent\n");
                     }
                     else{
-                        int n = getIndexChild(lastChild+1);
+                        int n = getIndexChild(lastChild + 1);
                         lastChild = n;
-                        REDIRECT(newfd,clients.ip[lastChild], clients.port[lastChild]);
+                        REDIRECT(newfd, clients.ip[lastChild], clients.port[lastChild]);
                         close(newfd);
                     }
                 }
                 else {
-                    int n = getIndexChild(lastChild+1);
+                    int n = getIndexChild(lastChild + 1);
                     lastChild = n;
-                    REDIRECT(newfd,clients.ip[lastChild], clients.port[lastChild]);
+                    REDIRECT(newfd, clients.ip[lastChild], clients.port[lastChild]);
                     close(newfd);
                 }
             } 
             // When receives messages from its clients
             else if(clients.available < tcpsessions){
                 for(int i = 0; i < tcpsessions; i++) {
-                    printf("clients.fd[%d] %d\n", i, clients.fd[i]);
+                    if(debug == 1)
+                        printf("clients.fd[%d] %d\n", i, clients.fd[i]);
+
                     if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
-                        printf("recebi algo do meu filho com o id=%d \n",clients.fd[i]);
+                        if(debug == 1)
+                            printf("recebi algo do meu filho com o id=%d\n",clients.fd[i]);
+                        
                         int n = readTcp(clients.fd[i], clients.buffer[i]);
                         if(n <= 0)  {
-                            printf("Child left\n");
-                            removeChild(i);
+                            if(debug == 1)
+                                printf("Child left\n");
+                            deleteClient(clients.fd[i]);
                             continue;
 
                         }
 
-                        printf("clients.buffer[%d]: %s\n", i, clients.buffer[i]);
+                        if(debug == 1)
+                            printf("clients.buffer[%d]: %s\n", i, clients.buffer[i]);
 
                         int newAction = 1;
                         while(newAction == 1) {
                             // Receives a NEW_POP
                             if(clients.buffer[i][0] == 'N' && clients.buffer[i][1] == 'P') {
-                                printf("Received a NEW_POP\n");
+                                if(debug == 1)
+                                    printf("Received a NEW_POP\n");
 
                                 int newLine = 0;
 
@@ -780,7 +807,8 @@ int main(int argc, char const *argv[]) {
                                 if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
                                     // checks if both informations are contained there
                                     if(sscanf(&clients.buffer[i][3], "%[^:]:%[^\n]\n",newPopIp, newPopPort) == 2) {
-                                        printf("newPopIp: %s\newPopPort: %s\n", newPopIp, newPopPort);
+                                        if(debug == 1)
+                                            printf("newPopIp: %s\newPopPort: %s\n", newPopIp, newPopPort);
 
                                         // Adds the new client to the list of clients
                                         addClient(clients.fd[i], newPopIp, newPopPort);
@@ -794,8 +822,10 @@ int main(int argc, char const *argv[]) {
                                         else
                                             STREAM_FLOWING(clients.fd[i]);
 
-                                        printf(" clients.ip[i]:%s\n", clients.ip[i]);
-                                        printf(" clients.port[i]:%s\n", clients.port[i]);
+                                        if(debug == 1) {
+                                            printf(" clients.ip[i]:%s\n", clients.ip[i]);
+                                            printf(" clients.port[i]:%s\n", clients.port[i]);
+                                        }
 
                                         // Clears the idStram string, since it's jobs is done
                                         memset(newPopIp, '\0', BUFFER_SIZE);
@@ -824,15 +854,16 @@ int main(int argc, char const *argv[]) {
 
                                 int newLine = 0;
                                 // Found a complete message
-                                if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
+                                if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0) {
                                     // checks if both informations are contained there
                                     printf("sim entrei \n");
                                     if(sscanf(&clients.buffer[i][3],"%[^ ] %[^:]:%[^ ] %[^\n]\n", queryIdAux, newPopIp, newPopPort, avails) == 4) {
                                         int availsSend;
 
                                         printf("queryIdAux2 %s \n", queryIdAux);
-                                            printf("newPopIp2 %s \n", newPopIp);
-                                            printf("Port2 %s \n", queryIdAux);
+                                        printf("newPopIp2 %s \n", newPopIp);
+                                        printf("Port2 %s \n", newPopPort);
+                                        printf("avails2 %s \n", avails);
 
 
                                         printListQId();
@@ -845,39 +876,43 @@ int main(int argc, char const *argv[]) {
                                                 availsSend = atoi(avails);
                                             else 
                                                 availsSend = n;
-
-                                            if(availsSend != 0){
+                                            printf("availsSend %d\n", availsSend);
+                                            if(availsSend != 0) {
                                                 // checks if the AP is already on the list or if the current AP bestpops on the list is smaller than the new receive value
                                                 if(isAPontTheList(newPopIp, newPopPort, availsSend) == 1) {
                                                     // Inputs the new access points
                                                     insertAccessPoint(newPopIp, newPopPort, availsSend);
-                                                    for(int j = 0; j < availsSend; j++)
+                                                    for(int d = 0; d < availsSend; d++) {
                                                         decrementQueryID(queryIdAux);
+                                                    }
                                                 }
                                             }
                                         }
                                         else{
                                             printf("queryIdAux1 %s \n", queryIdAux);
                                             printf("newPopIp1 %s \n", newPopIp);
-                                            printf("Port1 %s \n", queryIdAux);
+                                            printf("Port1 %s \n", newPopPort);
 
 
                                             // Finds how many bestpops are still to find to that queryID
                                             n = getLeftQueryID(queryIdAux);
-                                            if(atoi(avails) <= n)
-                                                availsSend = atoi(avails);
-                                            else 
-                                                availsSend = n;
 
-                                            if(availsSend != 0){
-                                                if(!POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend)){                                            
+                                            if(atoi(avails) <= n){
+                                                availsSend = atoi(avails);
+                                            }
+                                            else {
+                                                availsSend = n;
+                                            }
+
+                                            if(availsSend != 0) {
+                                                if(!POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend)) {                                            
                                                     deleteQueryID(queryIdAux);
                                                     DadLeft(&root, &fdAccessServer, &fdUp);
-                                                    continue;
                                                 }
                                                 else{
-                                                    for(int j = 0; j < availsSend; j++)
+                                                    for(int d = 0; d < availsSend; d++){
                                                         decrementQueryID(queryIdAux);
+                                                    }
                                                 }
                                             }
                                         }
@@ -896,34 +931,30 @@ int main(int argc, char const *argv[]) {
                                     }
                                     // There's no more messages
                                     else {
-                                        printf("theres no more messages \n");
                                         newAction = 0;
                                         memset(clients.buffer[i], '\0', PACKAGE_TCP);
                                     }
                                 }
                                 // The data is not complete
                                 else {
-                                    printf("oii? \n");
                                     newAction = 0;
                                 }
                             }
                             // Receives a TREE-REPLY
                             else if(clients.buffer[i][0] == 'T' && clients.buffer[i][1] == 'R'){
-                                printf("Received a TREE_REPLY\n");
-                                printf("recebi um %s \n", clients.buffer[i]);
+                                if(debug == 1)
+                                    printf("Received a TREE_REPLY\n");
 
                                 int doubleNewLine = 0;
                                 // Found a complete message
                                 if((doubleNewLine = findsDoubleNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0) {
                                     // checks if both informations are contained there
-                                    printf("sim entrei \n");
                                     if(root) {
-                                        int newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP);
                                         // prints the content of the message
                                         if(sscanf(&clients.buffer[i][3],"%[^:]:%[^ ] %[^\n]\n", TRip, TRport, TRtcpsessions) == 3) {
                                             printf("%s:%s (%s", TRip, TRport, TRtcpsessions);
-                                            for((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)); newLine <  doubleNewLine - 1; newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) {
-                                                if(sscanf(&clients.buffer[i][newLine+3],"%[^:]:%[^\n]\n", TRip, TRport) == 2) {
+                                            for(int newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP); newLine <  doubleNewLine - 1; newLine += 1 + findsNewLine(&clients.buffer[i][newLine+1], PACKAGE_TCP - (newLine + 1))) {
+                                                if(sscanf(&clients.buffer[i][newLine+1],"%[^:]:%[^\n]\n", TRip, TRport) == 2) {
                                                     printf(" %s:%s", TRip, TRport);
                                                     // Sends the message of TREE QUERY to discover the suns of the sun
                                                     TREE_QUERY(clients.fd[i], TRip, TRport);
@@ -951,7 +982,6 @@ int main(int argc, char const *argv[]) {
                                     }
                                     // There's no more messages
                                     else {
-                                        printf("theres no more messages \n");
                                         newAction = 0;
                                         memset(clients.buffer[i], '\0', PACKAGE_TCP);
                                     }

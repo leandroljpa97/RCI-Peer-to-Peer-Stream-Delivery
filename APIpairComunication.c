@@ -22,26 +22,6 @@
 
 #define HEX_STYLE "0000"
 
-void removeChild(int index){
-    removeNode(clients.ip[index], clients.port[index]);
-    close(clients.fd[index]);
-    clients.fd[index] = 0;
-    clients.available ++;
-
-    memset(clients.ip[index], '\0', IP_SIZE);
-    memset(clients.port[index],'\0', PORT_SIZE);
-    memset(clients.buffer[index], '\0', PACKAGETCP);
-}
-
-void closeAllClients() {
-    for (int i = 0; i < tcpsessions; ++i) {
-        if(clients.fd[i] != 0)
-            removeChild(i);
-    }
-}
-
-
-
 /* ENTERING STREAM TREE */
 
 int WELCOME(int _fd) {
@@ -195,7 +175,7 @@ int POP_QUERYroot(int _fd, uint16_t _queryId, int _bestPops) {
     sprintf(bestPopString, "%d", _bestPops);
     strcat(buffer, bestPopString);
     strcat(buffer, "\n");
-    printf("o buffer no whoIsRoot é %s\n", buffer);
+    printf("o buffer no POP_QUERYroot é %s\n", buffer);
 
     // finds the size of the POP_QUERY message
     int i = 0;
@@ -220,7 +200,7 @@ int POP_QUERYclients(int _fd, char _queryId[], int _bestPops) {
     sprintf(bestPopString, "%d", _bestPops);
     strcat(buffer, bestPopString);
     strcat(buffer, "\n");
-    printf("o buffer no whoIsRoot é %s\n", buffer);
+    printf("o buffer no POP_QUERYclients é %s\n", buffer);
 
     // finds the size of the POP_QUERY message
     int i = 0;
@@ -249,7 +229,7 @@ int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avai
     sprintf(availsString, "%d", _avails);
     strcat(buffer, availsString);
     strcat(buffer, "\n");
-    printf("o buffer no whoIsRoot é %s\n", buffer);
+    printf("o buffer no POP_REPLY é %s\n", buffer);
 
     // finds the size of the POP_REPLY message
     int i = 0;
@@ -274,7 +254,6 @@ int TREE_QUERY(int _fd, char _ipaddr[], char _tport[]) {
     strcat(buffer, ":");
     strcat(buffer, _tport);
     strcat(buffer, "\n");
-    printf("o buffer no TREE_QUERY é %s\n", buffer);
 
     // finds the size of the POP_REPLY message
     int i = 0;
@@ -310,7 +289,6 @@ int TREE_REPLY(int _fd) {
         }
     }
     strcat(buffer, "\n");
-    printf("o buffer no TREE_QUERY é %s\n", buffer);
 
     // finds the size of the POP_REPLY message
     int i = 0;

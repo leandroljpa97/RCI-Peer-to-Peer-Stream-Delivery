@@ -62,6 +62,18 @@ void error_confirmation(char*s) {
         exit(EXIT_FAILURE);
 }
 
+void AsciiToHex(char dataIn[], char dataOut[]) {
+    int i, len;
+
+ 
+    len = strlen(dataIn);
+    if(dataIn[len-1]=='\n')
+        dataIn[--len] = '\0';
+
+    for(i = 0; i<len; i++){
+        sprintf(dataOut+i*2, "%02X", dataIn[i]);
+    }
+}
 
 
 void initClientStructure(){
@@ -90,6 +102,14 @@ void addClient(int _fd, char _ip[], char _port[]) {
     memset(clients.buffer[i], '\0', PACKAGETCP);
 }
 
+
+
+
+/*
+ * insertFdClient: inserts a fd on a empty position and decreases the number of available positions
+   return: 1 - success
+           0 - no empty position found, fd not added
+ */
 int insertFdClient(int _newfd) {
     for(int i = 0; i < tcpsessions; i++){
         if(clients.fd[i] == 0){
@@ -101,6 +121,11 @@ int insertFdClient(int _newfd) {
     return 0;
 }
 
+/*
+ * insertFdClient: deletes a fd and increases the number of available positions
+   return: 1 - success
+           0 - no fd position found, fd not deleted
+ */
 int deleteFdClient(int _delfd) {
     for(int i = 0; i < tcpsessions; i++){
         if(clients.fd[i] == _delfd){
@@ -111,6 +136,17 @@ int deleteFdClient(int _delfd) {
     }
     return 0;
 }
+
+int getIndexChild(int _index){
+    for(int i = _index; i < tcpsessions; i++)
+        if(clients.fd[i] != 0)
+            return i;
+
+    int n = getIndexChild(0);
+    return n;
+   
+}
+
 
 
 
@@ -125,6 +161,7 @@ void clearClientStructure() {
     free(clients.port);
     free(clients.buffer);
 }
+
 
 void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd) {
     FD_ZERO(_fd_sockets);
@@ -273,9 +310,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
         }
         else if(strcmp(argv[i], "-h") == 0) {
             printf("Command line commands:\n");
-             printf("iamroot [<streamID>] [-i <ipaddr>] [-t <tport>] [-u <uport>] \n[-s <rsaddr>[:<rsport>]]\n[-p <tcpsessions>]\n[-n <bestpops>] [-x <tsecs>]\n[-b] [-d] [-h] \n");
-
-            
+            printf("iamroot [<streamID>] [-i <ipaddr>] [-t <tport>] [-u <uport>] \n[-s <rsaddr>[:<rsport>]]\n[-p <tcpsessions>]\n[-n <bestpops>] [-x <tsecs>]\n[-b] [-d] [-h] \n");    
             exit(0);
         }
         else {
@@ -337,27 +372,3 @@ int findsDoubleNewLine(char *buffer, int size) {
 }
 
 
-int getIndexChild(int _index){
-    for(int i = _index; i < tcpsessions; i++)
-        if(clients.fd[i] != 0)
-            return i;
-
-    int n = getIndexChild(0);
-    return n;
-   
-}
-
-
-void AsciiToHex(char dataIn[], char dataOut[]){
-    int i, len;
-
- 
-    len = strlen(dataIn);
-    if(dataIn[len-1]=='\n')
-        dataIn[--len] = '\0';
-
-    for(i = 0; i<len; i++){
-        sprintf(dataOut+i*2, "%02X", dataIn[i]);
-    }
-    
-}

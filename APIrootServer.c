@@ -16,6 +16,7 @@
 #include "APIaccessServer.h"
 #include "APIpairComunication.h"
 #include "utils.h"
+#include "list.h"
 #include "udp.h"
 #include "tcp.h"
 
@@ -27,6 +28,9 @@ void ctrl_c_callback_handler(int signum) {
 
     closeAllClients();
     clearClientStructure();
+    void printListQId();
+    void deleteAPList();
+    
     //temos de dar close aos sockets todos nao?
     exit(0);
 }
@@ -57,7 +61,7 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
     for(int j = 0; j < tcpsessions; j++)
         if(clients.fd[j] != 0)
             if(!BROKEN_STREAM(clients.fd[j]))
-                removeChild(j);
+                deleteClient(clients.fd[j]);
 
 
     if(WHOISROOT(_root,_fdAccessServer,_fdUp)== -2){
@@ -74,23 +78,30 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
         for(int j = 0; j < tcpsessions; j++)
             if(clients.fd[j] != 0)
                 if(!STREAM_FLOWING(clients.fd[j]))
-                    removeChild(j);
+                    deleteClient(clients.fd[j]);
     }
     // in the case of status confirmaion, i have to receive a STREAM FLOWING TO KNOW that its ok to pass to normal state
-    else
+    else {
+        printf("\n    CHENAGED STATE TO CONFIRMATION\n");
         status = CONFIRMATION;
+    }
 }
 
 int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAmRootIP[] , char _availableIAmRootPort[]){
     struct sockaddr_in addr;
     int fd = -1;
     fd_set fd_sockets;  
+
     struct timeval *t1 = NULL;
     struct timeval t2;
+
     char buffer[BUFFER_SIZE], buffer_aux[BUFFER_SIZE], action[BUFFER_SIZE];
 
-    printf("o ip da root é %s \n", _accessServerIP);
-    printf("o porto da root é %s \n", _accessServerPort);
+    if(debug == 1) {
+        printf("o ip da root é %s \n", _accessServerIP);
+        printf("o porto da root é %s \n", _accessServerPort);
+    }
+                        
 
     // Initiates UPD socket for communication with the accessServer
     struct addrinfo *res = createUPDsocket(&fd, _accessServerIP, _accessServerPort);
@@ -99,22 +110,21 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
     int tries = 0;
     int counter = 0;
     int max = fd;
-    printf("PERFORM POPREQ\n");
+
+    // Time variables
+    t1 = NULL;
+    t2.tv_usec = 0;
+    t2.tv_sec = TIMEOUT;
+    t1 = &t2;
+
     do {
         POPREQ(fd, res);
-        printf("SENT POPREQ\n");
 
         // Indicate to select to watch UDP socket
         FD_ZERO(&fd_sockets);
         max = fd;
         addFd(&fd_sockets, &max, fd);
-
-        // Time variables
-        t1 = NULL;
-        t2.tv_usec = 0;
-        t2.tv_sec = TIMEOUT;
-        t1 = &t2;
-    
+        
         // Puts server in receive state with timeout option
         counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);     
             
@@ -126,9 +136,13 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
         // if counter = 0, any response was received
         if(!counter){
             printf("timeout...\n");
+            // Time variables
+            t1 = NULL;
+            t2.tv_usec = 0;
+            t2.tv_sec = TIMEOUT;
+            t1 = &t2;
         }
         tries++;
-        printf("TRY POPREQ\n");
     } while(counter < 1 && tries < TRIES);
 
     if(tries >= TRIES) {
@@ -138,8 +152,6 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
         close(fd);
         return -2;
     }
-
-    printf("POPREQ msg sent \n");
 
     if(FD_ISSET(fd, &fd_sockets)){
         int n = receiveUdp(fd, buffer, BUFFER_SIZE, &addr);
@@ -155,12 +167,9 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
             // EXIT PROGRAM
             exit(0);
         }
-
         printf("availableIAmRootIP : %s \n", _availableIAmRootIP);
-                printf("availableIAmRootPort : %s  \n", _availableIAmRootPort);
-
-
-        printf("recebi um popresp: %s\n", buffer);
+        printf("availableIAmRootPort : %s  \n", _availableIAmRootPort);
+        
     }
 
     freeaddrinfo(res);
@@ -244,6 +253,10 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         // if counter = 0, any response was received
         if(!counter){
             printf("timeout...\n");
+            t1 = NULL;
+            t2.tv_usec = 0;
+            t2.tv_sec = TIMEOUT;
+            t1 = &t2;
         }
         tries++;
     } while(counter < 1 && tries < TRIES);
@@ -251,7 +264,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
 
     if(tries >= TRIES && counter < 1) {
         // FUNCTION TO TURN OFF EVERYTHING
-        perror("Error wgo is root"); 
+        perror("Error WHOISROOT"); 
         freeaddrinfo(res);
         close(fd);
         exit(0);
@@ -274,9 +287,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             *fdAccessServer = initUDPserver();
 
             // Access to stream to start transmission
-            *fdUp = connectToStream();
-
-            
+            *fdUp = connectToStream();            
         }
         // Receives the information that there's already a root on the tree 
         // and needs to go to the access server to acquire the correct IP and port
@@ -287,44 +298,45 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             availableIAmRootIP[0] = '\0';
             availableIAmRootPort[0] = '\0';
 
+            printf("ROOTIS %s:%s\n", accessServerIP, accessServerPort);
+
             // Communicates with access server to understand to where to connect 
-            do{   
-                        
+            do{
                 if((findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == -2)){
                     if(status == DAD_LOST)
                         return -2;
-
                     else {
-                        printf("i will do again whoIsRoot \n");
+                        if(debug == 1)
+                            printf("i will do again whoIsRoot \n");
                         WHOISROOT(root,fdAccessServer, fdUp);
                         break;
                     }
                 }
-
-                if(strcmp(availableIAmRootIP,ipaddr)== 0 && strcmp(availableIAmRootPort,tport)==0){
+                // Compares if the ip and port receive is myself
+                if(strcmp(availableIAmRootIP, ipaddr)== 0 && strcmp(availableIAmRootPort, tport)==0){
                     reps ++;
+                    if(debug == 1)
+                        printf(" access server gave my ip and port\n");
                     continue;
-                    printf(" access server gave my ip and port \n");
                 }
 
                 for(int j = 0; j < tcpsessions; j++){
                     if(clients.fd[j] != 0){
                         if(strcmp(availableIAmRootIP, clients.ip[j]) == 0 && strcmp(availableIAmRootPort, clients.port[j]) == 0 ){
                             reps ++;
+                            if(debug == 1)
+                                printf(" access server gave ip and port of my childreen \n"); 
                             continue;
-                            printf(" access server gave ip and port of my childreen \n"); 
                         }
                     }
 
                 }
 
-                
-                
                 *fdUp = connectToTcp(availableIAmRootIP, availableIAmRootPort);
 
                 reps ++;
             } while(*fdUp == -1 && reps < TRIES_AP);
-
+            printf("CONNECTED TO %s:%s\n", availableIAmRootIP, availableIAmRootPort);
             if(reps >= TRIES_AP && *fdUp == -1){
                 printf("I tried 3 times to get an access point and nothing \n");
                 exit(1);
@@ -473,7 +485,7 @@ int DUMP() {
 	int fd = -1;
 
 	// Buffers to hold messages
-	char buffer[BUFFER_SIZE];
+	char buffer[PACKAGETCP];
 	char *streams;
 
     // Mask for the select
@@ -514,6 +526,10 @@ int DUMP() {
         // if counter = 0, any response was received
         if(!counter){
             printf("timeout dump...\n");
+            t1 = NULL;
+            t2.tv_usec = 0;
+            t2.tv_sec = TIMEOUT;
+            t1 = &t2;
         }
         tries++;
     } while(counter < 1 && tries < TRIES);
@@ -529,11 +545,15 @@ int DUMP() {
     if(FD_ISSET(fd, &fd_sockets)) {
         struct sockaddr_in addr;
 
-    	receiveUdp(fd, buffer, BUFFER_SIZE, &addr);
+    	receiveUdp(fd, buffer, PACKAGETCP, &addr);
 
         // Advance the "STREAMS"
         streams = &buffer[8];
         printf("%s", streams);    	
+
+        if(findsDoubleNewLine(buffer, PACKAGETCP) == -1) {
+            printf("Not all streams were printed, more streams available!\n");
+        }
 	}
 
     freeaddrinfo(res);

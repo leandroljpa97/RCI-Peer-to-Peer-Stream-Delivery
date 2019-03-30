@@ -47,8 +47,16 @@ int getAccessPoint(char *ip, char *port);
 
 void removeNode(char * ip, char *port);
 
+void closeAllClients();
+
+void deleteClient(int _fd);
+
 void printListCLient();
 
 void printListQId();
+
+void printListQId();
+
+void deleteAPList();
 
 #endif

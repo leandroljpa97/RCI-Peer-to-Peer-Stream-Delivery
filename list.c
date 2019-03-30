@@ -63,11 +63,11 @@ void decrementQueryID(char _queryID[]) {
     {
         if(!strcmp(searchNode->queryID, _queryID))
         {
-            searchNode->left = searchNode->left -1;
-            if(searchNode->left == 0) {
+            searchNode->left -= 1;
+            printf("             decrementQueryID %s=%d\n", _queryID, searchNode->left);
+            if(searchNode->left == 0)
                 deleteQueryID(_queryID);
-                return;
-            }
+            return;
         }
         else
             searchNode = searchNode->next;
@@ -114,6 +114,20 @@ int getLeftQueryID(char _queryID[]) {
     return 0;
 }
 
+void deleteQueryIDList() {
+    queryIDList_t *aux = queryIDList;
+    queryIDList_t *aux2;
+
+    while(aux != NULL) {
+        aux2 = aux;
+        aux = aux->next;
+        free(aux2);
+    }
+}
+
+
+/********************* ACCESS POINT ***********************/
+
 /* 
     Funtion checks weather an AP is on the list
     returns: 1 when it's not on the list or the bestpops number is < than the bestpops received to that AP
@@ -152,8 +166,6 @@ void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
         aux = aux->next;
     }
 
-    // Caso não esteja na lista
-    aux = accessPoints;
     // Creates a new client structre
     clientList_t *new = (clientList_t *) malloc(sizeof(clientList_t));
     if(new == NULL) {
@@ -171,7 +183,8 @@ void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
     if(numberOfAP == 0) {
         currentClientAP = new;
     }
-    
+        
+    // Makes the list point to the new first element
     accessPoints = new;
     
     // Increases the number of AP on the list
@@ -206,17 +219,16 @@ void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
 }
 
 void deleteClientAP(clientList_t  *removeIP) {
-    clientList_t *myNode = accessPoints, *previous=NULL;
+    clientList_t *myNode = accessPoints, *previous = NULL;
     int flag = 0;
 
-    while(myNode!=NULL) {
+    while(myNode != NULL) {
         if(myNode == removeIP)
         {
-            if(previous==NULL)
+            if(previous == NULL)
                 accessPoints = myNode->next;
             else
                 previous->next = myNode->next;
-
 
             flag = 1;
             free(myNode); //need to free up the memory to prevent memory leak
@@ -305,26 +317,65 @@ void removeNode(char * ip, char *port){
 
 }
 
+void deleteClient(int _fd) {
+    int i;
+    for (i = 0; i < tcpsessions; ++i) {
+        if(clients.fd[i] == _fd) {
+            break;
+        }
+    }
+
+    if(root)
+        removeNode(clients.ip[i], clients.port[i]);
+
+    close(clients.fd[i]);
+    clients.fd[i] = 0;
+    clients.available ++;
+
+    memset(clients.ip[i], '\0', IP_SIZE);
+    memset(clients.port[i],'\0', PORT_SIZE);
+    memset(clients.buffer[i], '\0', PACKAGETCP);
+}
+
+void closeAllClients() {
+    for (int i = 0; i < tcpsessions; ++i) {
+        if(clients.fd[i] != 0)
+            deleteClient(clients.fd[i]);
+    }
+}
 
 void printListCLient(){
 
-    printf("NEW LIST \n");
+    printf("BEGINNING CLient LIST \n");
     clientList_t *myNode = accessPoints;
 
     while(myNode != NULL){
-        printf("myNode ->ip: %s, myNode ->port: %s, bestpops:%d \n",myNode->ip, myNode->port, myNode->bestpops);
+        printf("    myNode ->ip: %s, myNode ->port: %s, bestpops:%d \n",myNode->ip, myNode->port, myNode->bestpops);
         myNode = myNode ->next;
     }
-        printf("END LIST \n");
+        printf("END CLient LIST \n");
 
 }
 
-void printListQId(){
+void printListQId() {
    queryIDList_t *aux = queryIDList;
    printf("QUERY ID LIST\n");
     while(aux != NULL){
-        printf(" queryId: %s, left %d \n",aux->queryID, aux->left);
+        printf("        queryId: %s, left %d \n",aux->queryID, aux->left);
         aux = aux ->next;
     }
     printf("QUERY ID LIST END\n");
 }
+
+void deleteAPList() {
+    clientList_t  *aux = accessPoints;
+    clientList_t *aux2;
+
+    while(aux != NULL) {
+        aux2 = aux;
+        aux = aux->next;
+        free(aux2);
+    }
+}
+
+

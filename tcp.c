@@ -132,7 +132,7 @@ int readTcp(int fd, char* buffer) {
     aux[nReceived] = '\0';
     strcat(buffer, aux);
 
-    return (int) strlen(buffer);
+    return nReceived;
 }
 
 int readTcpNBytes(int fd, char* buffer, int nbytes) {
@@ -154,7 +154,6 @@ int readTcpNBytes(int fd, char* buffer, int nbytes) {
 
 
 int writeTcp(int _fd, char *data, int size) {
-    printf("dentro do tcp é size : %d \n",size);
     int nSended;   
     int nbytes;     
     int nLeft;      
