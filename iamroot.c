@@ -17,6 +17,7 @@ COMMENTS
 #include <string.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "utils.h"
 #include "APIrootServer.h"
@@ -405,7 +406,6 @@ int main(int argc, char const *argv[]) {
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
                                 sscanf(&bufferUp[3], "%[^\n]\n", sizeStream);
-
                                 // Checks if the DATA is complete
                                 if((int) strtol(sizeStream, NULL, 16) + 8 <= n) {
                                     printf("I received DATA\n"); 
@@ -432,9 +432,9 @@ int main(int argc, char const *argv[]) {
                                     }
 
                                     // Checks if more messages are on the buffer
-                                    if(((int) strtol(sizeStream, NULL, 16) + 9 < PACKAGE_TCP) && (bufferUp[(int) strtol(sizeStream, NULL, 16) + 9] != '\0')) {
+                                    if(((int) strtol(sizeStream, NULL, 16) + 9 < PACKAGE_TCP) && (bufferUp[(int) strtol(sizeStream, NULL, 16) + 8] != '\0')) {
                                         // Copies the buffer to the beggining
-                                        strcpy(bufferUp, &bufferUp[(int) strtol(sizeStream, NULL, 16) + 9]);
+                                        strcpy(bufferUp, &bufferUp[(int) strtol(sizeStream, NULL, 16) + 8]);
 
                                         // Indicates that the size received is the one received minus the messaged that is already processed
                                         n -= (int) strtol(sizeStream, NULL, 16) + 8;
