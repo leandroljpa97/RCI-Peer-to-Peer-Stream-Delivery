@@ -40,6 +40,8 @@ JA ESTA  A FUNCIONAR ISTO!! PARA TESTAR COMENTEI NA FUNÇAO DE CTR+C O (IF(ROOT)
 
 -> FECHAR OS SOCKETS NAS DEVIDAS ALTURAS 
 
+-> duvida do cunha 
+
 ------------------------------------------------------------------
 
 ## CASOS A TESTAR:
