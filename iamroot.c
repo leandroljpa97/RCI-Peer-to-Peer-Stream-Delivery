@@ -30,13 +30,6 @@ COMMENTS
 #include <stdlib.h>
 #include <ctype.h> 
 
-#define PACKAGE_UDP 128
-#define PACKAGE_TCP 128
-
-
-
-
-
 
 void interpRootServerMsg(char _data[]) {
     printf("data: %s \n",_data);
@@ -170,11 +163,11 @@ int main(int argc, char const *argv[]) {
     int PeriodicPQ = 0;
 
     // receive information from dad
-    char bufferUp[PACKAGETCP];
-    memset(bufferUp, '\0', PACKAGETCP);
+    char bufferUp[PACKAGE_TCP];
+    memset(bufferUp, '\0', PACKAGE_TCP);
     
-    char bufferHex[PACKAGETCP];
-    memset(bufferHex, '\0', PACKAGETCP);
+    char bufferHex[PACKAGE_TCP];
+    memset(bufferHex, '\0', PACKAGE_TCP);
 
     char sizeStream[BUFFER_SIZE];
     char idStream[BUFFER_SIZE];
@@ -389,8 +382,8 @@ int main(int argc, char const *argv[]) {
                             }
                         }
                     }
-                    memset(bufferUp, '\0', PACKAGETCP);
-                    memset(bufferHex, '\0', PACKAGETCP);
+                    memset(bufferUp, '\0', PACKAGE_TCP);
+                    memset(bufferHex, '\0', PACKAGE_TCP);
                 }
                 else if(!root){
                     printf("i received from my dad \n");
@@ -399,7 +392,7 @@ int main(int argc, char const *argv[]) {
                     int n = readTcp(fdUp, bufferUp);
                     if(n <= 0)  {
                         DadLeft(&root,&fdAccessServer,&fdUp);
-                        memset(bufferUp, '\0', PACKAGETCP);
+                        memset(bufferUp, '\0', PACKAGE_TCP);
                         continue;
                     }
 
@@ -408,50 +401,60 @@ int main(int argc, char const *argv[]) {
                         printf("action: %c%c\n", bufferUp[0], bufferUp[1]);
 
                         if(bufferUp[0] == 'D' && bufferUp[1] == 'A') {
-                            printf("I received DATA\n"); 
+                            int newLine = 0;
+                            // Found a complete message
+                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                sscanf(&bufferUp[3], "%[^\n]\n", sizeStream);
 
-                            if(dataStream) {
-                                if(ascii){
-                                    printf("o buffer tcp é: %s \n", bufferUp);
-                                }
-                                else {
-                                    AsciiToHex(bufferUp,bufferHex);
-                                    printf("o buffer tcp é: %s \n", bufferHex);
+                                // Checks if the DATA is complete
+                                if((int) strtol(sizeStream, NULL, 16) + 8 <= n) {
+                                    printf("I received DATA\n"); 
 
-                                }
-                            }
-                            // Copies the amount of bytes that will receive in 4 hex digits
-                            strncpy(sizeStream, &bufferUp[3], TCP_MESSAGE_SIZE);
+                                    if(dataStream) {
+                                        if(ascii){
+                                            printf("o buffer tcp é: %s \n", bufferUp);
+                                        }
+                                        else {
+                                            AsciiToHex(bufferUp, bufferHex);
+                                            printf("o buffer tcp é: %s \n", bufferHex);
 
-                            // Checks if it received the complete DA message
-                            if((int) strtol(sizeStream, NULL, 16) + 8 <= n) {
-                                // Retransmit data to its clients
-                                for (int i = 0; i < tcpsessions; ++i) {
-                                    if(clients.fd[i] != 0) {
-                                        if(!DATA(clients.fd[i], (int) strtol(sizeStream, NULL, 16), &bufferUp[8])) {
-                                            deleteClient(clients.fd[i]);
-                                            printf("Child gone\n");
                                         }
                                     }
-                                }
-                                // Checks if more messages are on the buffer
-                                if(((int) strtol(sizeStream, NULL, 16) + 9 < PACKAGE_TCP) && (bufferUp[(int) strtol(sizeStream, NULL, 16) + 9] != '\0')) {
-                                    // Copies the buffer to the beggining
-                                    strcpy(bufferUp, &bufferUp[(int) strtol(sizeStream, NULL, 16) + 9]);
 
-                                    // Indicates that the size received is the one received minus the messaged that is already processed
-                                    n -= (int) strtol(sizeStream, NULL, 16) + 8;
+                                    // Retransmit data to its clients
+                                    for (int i = 0; i < tcpsessions; ++i) {
+                                        if(clients.fd[i] != 0) {
+                                            if(!DATA(clients.fd[i], (int) strtol(sizeStream, NULL, 16), &bufferUp[8])) {
+                                                deleteClient(clients.fd[i]);
+                                                printf("Child gone\n");
+                                            }
+                                        }
+                                    }
+
+                                    // Checks if more messages are on the buffer
+                                    if(((int) strtol(sizeStream, NULL, 16) + 9 < PACKAGE_TCP) && (bufferUp[(int) strtol(sizeStream, NULL, 16) + 9] != '\0')) {
+                                        // Copies the buffer to the beggining
+                                        strcpy(bufferUp, &bufferUp[(int) strtol(sizeStream, NULL, 16) + 9]);
+
+                                        // Indicates that the size received is the one received minus the messaged that is already processed
+                                        n -= (int) strtol(sizeStream, NULL, 16) + 8;
+                                    }
+                                    else {
+                                        // Clears the bufferUp string, since it's jobs is done
+                                        memset(bufferUp, '\0', PACKAGE_TCP);
+                                        memset(bufferHex, '\0', PACKAGE_TCP);
+
+                                        newAction = 0;
+                                    } 
+
+                                    // Clears the size stream since DATA is done
+                                    memset(sizeStream, '\0', BUFFER_SIZE);
+
                                 }
+                                // The data is not complete                            
                                 else {
-                                    // Clears the bufferUp string, since it's jobs is done
-                                    memset(bufferUp, '\0', PACKAGE_TCP);
-                                    memset(bufferHex, '\0', PACKAGE_TCP);
-
                                     newAction = 0;
-                                } 
-
-                                // Clears the size stream since DATA is done
-                                memset(sizeStream, '\0', BUFFER_SIZE);
+                                }
                             }
                             // The data is not complete                            
                             else {
@@ -473,7 +476,7 @@ int main(int argc, char const *argv[]) {
                                     }
                                 }
                                 // Clears the idStram string, since it's jobs is done
-                                memset(idStream, '\0', PACKAGE_TCP);
+                                memset(idStream, '\0', BUFFER_SIZE);
 
                                 // checks if there is another message
                                 if(bufferUp[newLine + 1] != '\0') {
@@ -618,12 +621,12 @@ int main(int argc, char const *argv[]) {
 
                         else if(bufferUp[0] == 'B' && bufferUp[1] == 'S'){
                             int newLine = 0;
-                            broken = 1;
 
                             printf("Stream Stop .. Wait a moment! \n");
 
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                broken = 1;
 
                                 if(status == CONFIRMATION){
                                     printf("\nSTATUS CONFIRMATION\n");
@@ -655,12 +658,11 @@ int main(int argc, char const *argv[]) {
                         }
                         else if(bufferUp[0] == 'S' && bufferUp[1] == 'F'){
                             int newLine = 0;
-                            broken = 0;
-
-                            printf("Stream recovered. Enjoy it \n");
 
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                printf("Stream recovered. Enjoy it \n");
+                                broken = 0;
 
                                 if(status == CONFIRMATION)
                                     status = NORMAL;
@@ -731,6 +733,9 @@ int main(int argc, char const *argv[]) {
                             else {
                                 newAction = 0;
                             }
+                        }
+                        else {
+                                newAction = 0;
                         }
                     }
                 }                
@@ -849,12 +854,12 @@ int main(int argc, char const *argv[]) {
                             }
                             // Receives a POP-REPLY
                             else if(clients.buffer[i][0] == 'P' && clients.buffer[i][1] == 'R'){
-                                printf("Received a POP_REPLY\n");
                                 printf("recebi um %s \n", clients.buffer[i]);
 
                                 int newLine = 0;
                                 // Found a complete message
                                 if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0) {
+                                    printf("Received a POP_REPLY\n");
                                     // checks if both informations are contained there
                                     printf("sim entrei \n");
                                     if(sscanf(&clients.buffer[i][3],"%[^ ] %[^:]:%[^ ] %[^\n]\n", queryIdAux, newPopIp, newPopPort, avails) == 4) {
@@ -942,12 +947,12 @@ int main(int argc, char const *argv[]) {
                             }
                             // Receives a TREE-REPLY
                             else if(clients.buffer[i][0] == 'T' && clients.buffer[i][1] == 'R'){
-                                if(debug == 1)
-                                    printf("Received a TREE_REPLY\n");
 
                                 int doubleNewLine = 0;
                                 // Found a complete message
                                 if((doubleNewLine = findsDoubleNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0) {
+                                    if(debug == 1)
+                                        printf("Received a TREE_REPLY\n");
                                     // checks if both informations are contained there
                                     if(root) {
                                         // prints the content of the message
@@ -991,6 +996,9 @@ int main(int argc, char const *argv[]) {
                                     printf("oii? \n");
                                     newAction = 0;
                                 }
+                            }
+                            else {
+                                newAction = 0;
                             }
                         } 
                     }

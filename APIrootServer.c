@@ -485,7 +485,7 @@ int DUMP() {
 	int fd = -1;
 
 	// Buffers to hold messages
-	char buffer[PACKAGETCP];
+	char buffer[PACKAGE_TCP];
 	char *streams;
 
     // Mask for the select
@@ -545,13 +545,13 @@ int DUMP() {
     if(FD_ISSET(fd, &fd_sockets)) {
         struct sockaddr_in addr;
 
-    	receiveUdp(fd, buffer, PACKAGETCP, &addr);
+    	receiveUdp(fd, buffer, PACKAGE_TCP, &addr);
 
         // Advance the "STREAMS"
         streams = &buffer[8];
         printf("%s", streams);    	
 
-        if(findsDoubleNewLine(buffer, PACKAGETCP) == -1) {
+        if(findsDoubleNewLine(buffer, PACKAGE_TCP) == -1) {
             printf("Not all streams were printed, more streams available!\n");
         }
 	}

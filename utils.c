@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <ctype.h>
 
 #include "utils.h"
 
@@ -85,7 +86,7 @@ void initClientStructure(){
     for (int i = 0; i < tcpsessions; ++i) {
         clients.ip[i] = (char *) calloc(IP_SIZE, sizeof(char));
         clients.port[i] = (char *) calloc(PORT_SIZE, sizeof(char));
-        clients.buffer[i] = (char *) calloc(PACKAGETCP, sizeof(char));
+        clients.buffer[i] = (char *) calloc(PACKAGE_TCP, sizeof(char));
     }
 
 }
@@ -99,7 +100,7 @@ void addClient(int _fd, char _ip[], char _port[]) {
     }
     strcpy(clients.ip[i], _ip);
     strcpy(clients.port[i], _port);
-    memset(clients.buffer[i], '\0', PACKAGETCP);
+    memset(clients.buffer[i], '\0', PACKAGE_TCP);
 }
 
 
@@ -208,10 +209,10 @@ int checkPort(int _port){
 
 
 int readInputArguments(int argc, const char* argv[], char streamId[], char streamName[],
-    					char streamIP[], char streamPort[], char ipaddr[], 
-						char  tport[], char uport[], char rsaddr[], char rsport[],
-						int * tcpsessions, int * bestpops, int * tsecs, 
-						int *dataStream, int *debug) {
+                        char streamIP[], char streamPort[], char ipaddr[], 
+                        char  tport[], char uport[], char rsaddr[], char rsport[],
+                        int * tcpsessions, int * bestpops, int * tsecs, 
+                        int *dataStream, int *debug) {
 
     //flag to check if there is streamId in input parameters
     int flag_streamId = 0;
@@ -219,7 +220,8 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
         // Show available Streams
         return 1;
     }
-    
+    char streamIdAux[BUFFER_SIZE];
+
     for (int i = 1; i < argc; ++i) {
 
         if(strcmp(argv[i], "-i") == 0) {
@@ -314,14 +316,19 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
             exit(0);
         }
         else {
-            if(sscanf(argv[i], "%s", streamId) != 1) {
+            if(sscanf(argv[i], "%s", streamIdAux) != 1) {
                 printf("error in streamId \n");
                 exit(1);
             }
-            if(strlen(streamId) > 63) {
-                 printf("the length of streamId is greater then 63 charact \n");
-                 return 1;
+            if(strlen(streamIdAux) > 63) {
+                printf("the length of streamId is greater then 63 charact \n");
+                return 1;
             }
+
+            for(int j = 0; j< strlen(streamIdAux) ; j++) {
+                streamId[j] = tolower(streamIdAux[j]);
+            }
+            streamId[strlen(streamIdAux)] = '\0';
             if(sscanf(streamId,"%[^:]:%[^:]:%s", streamName, streamIP, streamPort)!=3){
                 printf("error in streamId parameters \n");
                 return 1;

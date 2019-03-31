@@ -131,7 +131,7 @@ int BROKEN_STREAM(int _fd){
 }
 
 int DATA(int _fd, int nbytes, char _data[]) {
-    char buffer[PACKAGETCP];
+    char buffer[PACKAGE_TCP];
     char nbytesHex[] = "0000";
 
     convertNumDoHex(nbytesHex, nbytes);
@@ -162,7 +162,7 @@ int DATA(int _fd, int nbytes, char _data[]) {
 /* DISCORVERY OF THE ACCESS POINT */
 
 int POP_QUERYroot(int _fd, uint16_t _queryId, int _bestPops) {
-	char buffer[PACKAGETCP];
+	char buffer[PACKAGE_TCP];
 	char bestPopString[] = "00";
     char queryIDHex[] = "0000";
 
@@ -190,7 +190,7 @@ int POP_QUERYroot(int _fd, uint16_t _queryId, int _bestPops) {
 }
 
 int POP_QUERYclients(int _fd, char _queryId[], int _bestPops) {
-    char buffer[PACKAGETCP];
+    char buffer[PACKAGE_TCP];
     char bestPopString[] = "00";
 
     // Creates POP_QUERY message
@@ -215,7 +215,7 @@ int POP_QUERYclients(int _fd, char _queryId[], int _bestPops) {
 }
 
 int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avails) {
-	char buffer[PACKAGETCP];
+	char buffer[PACKAGE_TCP];
 	char availsString[] = "00";
 
 	// Creates POP_REPLY message
@@ -246,7 +246,7 @@ int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avai
 /* TREE STRUCTURE MONITORING */
 
 int TREE_QUERY(int _fd, char _ipaddr[], char _tport[]) {
-    char buffer[PACKAGETCP];
+    char buffer[PACKAGE_TCP];
 
     // Creates TREE_QUERY message
     strcpy(buffer, "TQ ");
@@ -268,7 +268,7 @@ int TREE_QUERY(int _fd, char _ipaddr[], char _tport[]) {
 }
 
 int TREE_REPLY(int _fd) {
-    char buffer[PACKAGETCP];
+    char buffer[PACKAGE_TCP];
     char tcpsessionsString[] = "00";
 
     // Creates TREE_REPLY message

@@ -121,7 +121,7 @@ int createTcpServer() {
 
 int readTcp(int fd, char* buffer) {
     int nReceived;   
-    char aux[PACKAGETCP];    
+    char aux[PACKAGE_TCP];    
 
     nReceived = read(fd, aux, sizeof(aux));
     if(nReceived <= 0){
@@ -137,7 +137,7 @@ int readTcp(int fd, char* buffer) {
 
 int readTcpNBytes(int fd, char* buffer, int nbytes) {
     int nReceived;   
-    char aux[PACKAGETCP];    
+    char aux[PACKAGE_TCP];    
 
     nReceived = read(fd, aux, nbytes);
     if(nReceived <= 0){

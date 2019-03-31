@@ -334,7 +334,7 @@ void deleteClient(int _fd) {
 
     memset(clients.ip[i], '\0', IP_SIZE);
     memset(clients.port[i],'\0', PORT_SIZE);
-    memset(clients.buffer[i], '\0', PACKAGETCP);
+    memset(clients.buffer[i], '\0', PACKAGE_TCP);
 }
 
 void closeAllClients() {
