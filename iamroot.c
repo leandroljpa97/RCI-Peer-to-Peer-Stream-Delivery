@@ -703,7 +703,7 @@ int main(int argc, char const *argv[]) {
                                     if((strcmp(ipaddr, TQip) == 0) && (strcmp(tport, TQport) == 0)) {
                                         // Sends a tree reply
                                         if(!TREE_REPLY(fdUp)) {
-                                            // CHAMAR WHO IS ROOT
+                                            DadLeft(&root, &fdAccessServer, &fdUp);
                                         }
 
                                     }
