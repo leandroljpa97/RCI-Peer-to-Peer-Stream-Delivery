@@ -84,6 +84,7 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
     else {
         printf("\n    CHENAGED STATE TO CONFIRMATION\n");
         status = CONFIRMATION;
+        timerBS = 0;
     }
 }
 
@@ -485,7 +486,7 @@ int DUMP() {
 	int fd = -1;
 
 	// Buffers to hold messages
-	char buffer[PACKAGE_TCP];
+	char *buffer;
 	char *streams;
 
     // Mask for the select
@@ -508,6 +509,7 @@ int DUMP() {
     // Tries 3 times to get the information from root server
     int tries = 0;
     int counter = 0;
+
     do {
         // Indicate to select to watch UDP socket
 	    FD_ZERO(&fd_sockets);
@@ -543,16 +545,25 @@ int DUMP() {
     }
 
     if(FD_ISSET(fd, &fd_sockets)) {
+
         struct sockaddr_in addr;
 
-    	receiveUdp(fd, buffer, PACKAGE_TCP, &addr);
+        int nToReceiveUDP = checkReadUdp(fd, &addr);
+        if(nToReceiveUDP != -1) {
+            buffer = (char *) malloc((1 + nToReceiveUDP)*sizeof(char));
+            if(buffer == NULL) {
+                printf("Error in malloc\n");
+                exit(1);
+            }
 
-        // Advance the "STREAMS"
-        streams = &buffer[8];
-        printf("%s", streams);    	
+            int n = receiveUdp(fd, buffer, nToReceiveUDP, &addr);
+            buffer[n] = '\0';
 
-        if(findsDoubleNewLine(buffer, PACKAGE_TCP) == -1) {
-            printf("Not all streams were printed, more streams available!\n");
+            // Advance the "STREAMS"
+            streams = &buffer[8];
+            printf("%s", streams);      
+
+            free(buffer);
         }
 	}
 

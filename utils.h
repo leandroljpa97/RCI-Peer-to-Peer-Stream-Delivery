@@ -10,6 +10,8 @@
 
 #define TIMEOUT 5
 #define TIMEOUT_REMOVE 1
+#define TIMEOUT_POPQUERY 10
+#define TIMEOUT_BROKENSTREAM 5
 
 #define BUFFER_SIZE 256
 #define PACKAGE_TCP 65544
@@ -83,6 +85,8 @@ extern int ascii;
 
 extern char availableIAmRootIP[IP_SIZE];
 extern char availableIAmRootPort[BUFFER_SIZE];
+
+extern int timerBS;
 
 
 

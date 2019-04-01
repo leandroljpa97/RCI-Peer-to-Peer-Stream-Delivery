@@ -90,6 +90,22 @@ int answerUdp(int _fd, char data[], int size, struct  sockaddr * _addr) {
     return n;
 }
 
+int checkReadUdp(int _fd, struct sockaddr_in *_addr) {
+    socklen_t addrlen = sizeof(*_addr);
+    char buffer[PACKAGE_TCP];
+
+    int flags = MSG_PEEK;
+
+    // Does a MSG_PEEK to check how many bits has to read
+    int nToRead = recvfrom(_fd, buffer, PACKAGE_TCP, flags, (struct sockaddr *) _addr, &addrlen);
+    if(nToRead == -1) {
+        printf("Error in receive from UDP \n");
+        exit(1);
+    }
+
+    return nToRead;
+}
+
 int receiveUdp(int _fd, char buffer[], int size, struct sockaddr_in *_addr) {
 	socklen_t addrlen = sizeof(*_addr);
 

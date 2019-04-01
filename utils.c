@@ -56,7 +56,7 @@ int ascii = 1;
 char availableIAmRootIP[IP_SIZE];
 char availableIAmRootPort[BUFFER_SIZE];
 
-
+int timerBS = 0;
 
 void error_confirmation(char*s) {
         printf("%s \n",s);

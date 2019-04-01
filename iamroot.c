@@ -209,8 +209,11 @@ int main(int argc, char const *argv[]) {
     // Time variables
     t1 = NULL;
     t2.tv_usec = 0;
-    t2.tv_sec = tsecs;
+    t2.tv_sec = 1;
     t1 = &t2;
+
+    int timerTSECS = 0;
+    int timerPQ = 0;
 
     while(1) {
     	// Inits the mask of file descriptor
@@ -259,39 +262,61 @@ int main(int argc, char const *argv[]) {
             // Time variables
             t1 = NULL;
             t2.tv_usec = 0;
-            t2.tv_sec = tsecs;
+            t2.tv_sec = 1;
             t1 = &t2;
 
             if(root) {
-                if(debug == 1)
-                    printf("timeout\n");
+                if(timerTSECS == tsecs) {
+                    if(debug == 1)
+                        printf("timeout\n");
 
-                if(WHOISROOTwithoutResponse() == 0)
-                    printf("Unable to make WHO IS ROOT periódico\n");
-                
-                // Run the list of clients to send the message to search for more bestpops left
-                int POP_QUERYsent = 0;
+                    if(WHOISROOTwithoutResponse() == 0)
+                        printf("Unable to make WHO IS ROOT periódico\n");
+                    
+                    timerTSECS = 0;
+                }
+                else 
+                    timerTSECS++;
 
-                int j = 0;
-                // To not do the POP_query always on the same order
-                while(j < tcpsessions) {
-                    if(clients.fd[PeriodicPQ] != 0) {
-                        printf("                    pop query %d\n", j);
-                        if(!POP_QUERYroot(clients.fd[PeriodicPQ], queryId, bestpops))
-                            deleteClient(clients.fd[PeriodicPQ]);
-                        POP_QUERYsent = 1;
+                if(timerPQ == TIMEOUT_POPQUERY) {
+                    // Run the list of clients to send the message to search for more bestpops left
+                    int POP_QUERYsent = 0;
+
+                    int j = 0;
+                    // To not do the POP_query always on the same order
+                    while(j < tcpsessions) {
+                        if(clients.fd[PeriodicPQ] != 0) {
+                            printf("                    pop query %d\n", j);
+                            if(!POP_QUERYroot(clients.fd[PeriodicPQ], queryId, bestpops))
+                                deleteClient(clients.fd[PeriodicPQ]);
+                            POP_QUERYsent = 1;
+                        }
+                        if(PeriodicPQ < tcpsessions)
+                            PeriodicPQ++;
+                        else
+                            PeriodicPQ = 0;
+                        j++;
                     }
-                    if(PeriodicPQ < tcpsessions)
-                        PeriodicPQ++;
-                    else
-                        PeriodicPQ = 0;
-                    j++;
+                    // Insert the pending request bestpops
+                    if(POP_QUERYsent) {
+                        insertQueryIDroot(queryId, bestpops);
+                        queryId++;
+                    }
                 }
-                // Insert the pending request bestpops
-                if(POP_QUERYsent) {
-                    insertQueryIDroot(queryId, bestpops);
-                    queryId++;
+                else 
+                    timerPQ++;
+            }
+            if(status == CONFIRMATION) {
+                if(timerBS == TIMEOUT_BROKENSTREAM) {
+                    printf("\nSTATUS CONFIRMATION\n");
+                    close(fdUp);
+                    fdUp = -1;
+                    DadLeft(&root, &fdAccessServer, &fdUp);
+                    timerBS = 0;
                 }
+                else
+                    timerBS++;
+
             }
         }
         else {
@@ -822,9 +847,7 @@ int main(int argc, char const *argv[]) {
                                         if(root)
                                             insertAccessPoint(newPopIp, newPopPort, 1);
 
-                                        if(broken)
-                                            BROKEN_STREAM(clients.fd[i]);
-                                        else
+                                        if(!broken)
                                             STREAM_FLOWING(clients.fd[i]);
 
                                         if(debug == 1) {
