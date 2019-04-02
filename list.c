@@ -64,7 +64,6 @@ void decrementQueryID(char _queryID[]) {
         if(!strcmp(searchNode->queryID, _queryID))
         {
             searchNode->left -= 1;
-            printf("             decrementQueryID %s=%d\n", _queryID, searchNode->left);
             if(searchNode->left == 0)
                 deleteQueryID(_queryID);
             return;
@@ -152,43 +151,43 @@ int isAPontTheList(char _port[], char _ip[], int _bestpops) {
 
 void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
     clientList_t *aux = accessPoints;
+    int newAP = 0;
+    int plus = 0;
 
     // Se ja estiver na lista, atualiza o seu valor
     while(aux!=NULL)
     {
         if((strcmp(aux->port,_port) == 0) && (strcmp(aux->ip,_ip) == 0)) {
-            if(aux->negative > 0) {
-                aux->negative = 0;
-            }
+            plus = _bestpops - aux->bestpops;
             aux->bestpops = _bestpops;
-            return;
+            newAP = 1;
+            numberOfAP += plus;
+            break;
         }
         aux = aux->next;
     }
+    if(newAP == 0) {
+        // Creates a new client structre
+        clientList_t *new = (clientList_t *) malloc(sizeof(clientList_t));
+        if(new == NULL) {
+            printf("Error malloc\n");
+            exit(0);
+        }
 
-    // Creates a new client structre
-    clientList_t *new = (clientList_t *) malloc(sizeof(clientList_t));
-    if(new == NULL) {
-        printf("Error malloc\n");
-        exit(0);
+        // Populate the structure
+        new->next = accessPoints;
+        strcpy(new->ip, _ip);
+        strcpy(new->port, _port);
+        new->bestpops = _bestpops;
+        new->negative = 0;
+        accessPoints = new;
+
+        if(numberOfAP == 0) {
+            currentClientAP = new;
+        }
+        // Increases the number of AP on the list
+        numberOfAP += _bestpops;
     }
-
-    // Populate the structure
-    new->next = accessPoints;
-    strcpy(new->ip, _ip);
-    strcpy(new->port, _port);
-    new->bestpops = _bestpops;
-    new->negative = 0;
-
-    if(numberOfAP == 0) {
-        currentClientAP = new;
-    }
-        
-    // Makes the list point to the new first element
-    accessPoints = new;
-    
-    // Increases the number of AP on the list
-    numberOfAP += _bestpops;
 
     aux = accessPoints;
 
@@ -197,8 +196,8 @@ void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
         while(aux!=NULL) {
             // if there's a negative AP
             if(aux->negative > 0) {
-                aux->bestpops -= aux->negative;
-                numberOfAP -= aux->negative;    
+                aux->bestpops -= aux->negative;    
+                aux->negative = 0;
                 if(aux->bestpops <= 0) {
                     if(currentClientAP == aux) {
                          // Goes to the next client on the list
@@ -215,6 +214,7 @@ void insertAccessPoint(char _ip[], char  _port[], int _bestpops) {
             aux = aux->next;
         }
     }
+
 
 }
 
@@ -266,18 +266,18 @@ int getAccessPoint(char *ip, char *port) {
         // When there's more AP than bestpops, decreses the number of bestpops of that AP or remove it from the list if there's no more positions
         if(numberOfAP > bestpops) {
             // Decreases the number of available connections for that AP
-            if(aux->bestpops > 1) {
+            if(aux->bestpops > 0) {
                 aux->bestpops--;
             }
             else {
                 deleteClientAP(aux);
             }
-            numberOfAP--;
         }
         // When there's less or equal AP than bestpops, increases the negative variable
         else {
             aux->negative++;
         }
+        numberOfAP--;
 
         // When there's only bestpops AP on the list, sends the information to do POP_QUERY
         if(numberOfAP < bestpops)

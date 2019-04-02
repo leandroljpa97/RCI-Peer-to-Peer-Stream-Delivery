@@ -42,14 +42,12 @@ int POPRESP(int _fd, struct sockaddr_in *_addr, char _ipaddr[], char _tport[]) {
     strcat(buffer, ":");
     strcat(buffer, _tport);
     strcat(buffer, "\n");
-    printf("o buffer no POPRESP é %s\n", buffer);
 
     // finds the size of the WHOISROOT message
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
     answerUdp(_fd, buffer, i + 1, (struct sockaddr *) _addr);
-    printf("mandei um popresp \n");
 	
 	return 1;
 }

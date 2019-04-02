@@ -5,15 +5,15 @@ echo "This script is creating a tree of iamroot"
 workDir="/home/francisco/Documents/RCI/Project/RCI-Peer-to-Peer-Stream-Delivery/"
 
 
-numberOfIAMROOT=11
-streamID="maregaa"
-streamPort="40300"
-tcpSessions=3
-bestpops=2
+numberOfIAMROOT=4
+streamID="maregaanhaaxxxxxxaxxxxxaxxxxx"
+streamPort="40600"
+tcpSessions=1
+bestpops=1
 
 
 
-port1=40380 #$(($streamPort+1))
+port1=$(($streamPort+1))
 port2=$(($port1+1))
 
 #io.elementary.terminal -e nc -p $streamPort -l

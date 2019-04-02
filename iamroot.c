@@ -41,7 +41,6 @@ void interpRootServerMsg(char _data[]) {
         content[i] = tolower(contentAux[i]);
     content[strlen(contentAux)] = '\0';
 
-    printf(" a mensagem vinda do stdi  é: %s \n",content);
     if (flag < 0){
         printf("Error reading stdin. Exit(0) the program\n");   
     }
@@ -215,6 +214,11 @@ int main(int argc, char const *argv[]) {
     int timerTSECS = 0;
     int timerPQ = 0;
 
+    if(!root) {
+        broken = 1;
+        status = CONFIRMATION;
+    }
+
     while(1) {
     	// Inits the mask of file descriptor
         initMaskStdinFd(&fd_sockets, &maxfd);
@@ -238,8 +242,6 @@ int main(int argc, char const *argv[]) {
             }
         }
 
-        /*if(root)
-            printListCLient();*/
 
         
 
@@ -286,7 +288,6 @@ int main(int argc, char const *argv[]) {
                     // To not do the POP_query always on the same order
                     while(j < tcpsessions) {
                         if(clients.fd[PeriodicPQ] != 0) {
-                            printf("                    pop query %d\n", j);
                             if(!POP_QUERYroot(clients.fd[PeriodicPQ], queryId, bestpops))
                                 deleteClient(clients.fd[PeriodicPQ]);
                             POP_QUERYsent = 1;
@@ -302,13 +303,17 @@ int main(int argc, char const *argv[]) {
                         insertQueryIDroot(queryId, bestpops);
                         queryId++;
                     }
+                    timerPQ = 0;
+
+
+                    if(root)
+                        printListCLient();
                 }
                 else 
                     timerPQ++;
             }
             if(status == CONFIRMATION) {
                 if(timerBS == TIMEOUT_BROKENSTREAM) {
-                    printf("\nSTATUS CONFIRMATION\n");
                     close(fdUp);
                     fdUp = -1;
                     DadLeft(&root, &fdAccessServer, &fdUp);
@@ -335,8 +340,6 @@ int main(int argc, char const *argv[]) {
             } 
             // When receives messages from the access server
             else if(fdAccessServer != -1 && FD_ISSET(fdAccessServer, &fd_sockets)) {
-                printf("Received something on the access server\n");
-
                 char bufferAccessServer[BUFFER_SIZE];
                 struct sockaddr_in addr;
 
@@ -345,8 +348,6 @@ int main(int argc, char const *argv[]) {
                 if(strstr(bufferAccessServer, "POPREQ") != NULL) {
                     if(debug == 1)
                         printf("RECEIVED A POPREQ\n");
-
-                    printf("clients.available na root %d\n", clients.available);
 
                     // If root has available connection, allow connection to itself
                     if(clients.available > 0) {
@@ -358,13 +359,11 @@ int main(int argc, char const *argv[]) {
                         // Gets an IP and Port from the list of AP and responds to the client
                         if((findAP = getAccessPoint(ipAccessPoint, portAccessPoint)) != -1){
                             POPRESP(fdAccessServer, &addr, ipAccessPoint, portAccessPoint);
-                            printf("tnh la access points \n");
                         }
 
                         // Needs to find new AP to the list
                         if(findAP == 1) {
                             queryId++;
-                            printf("            POPREQ\n"); 
                             insertQueryIDroot(queryId, bestpops);
                             for(int i = 0; i < tcpsessions; i++)
                                 if(!POP_QUERYroot(clients.fd[i], queryId, bestpops))
@@ -375,7 +374,6 @@ int main(int argc, char const *argv[]) {
             }
             // When receives a message from up on the tree
             else if(fdUp != -1 && FD_ISSET(fdUp, &fd_sockets)) {
-                printf("i received something from TCP \n");
 
                 if(root){
                     // Reads the stream from the source up to the maximum allowed size
@@ -404,7 +402,8 @@ int main(int argc, char const *argv[]) {
                         if(clients.fd[i] != 0) {
                             if(!DATA(clients.fd[i], n, bufferUp)) {
                                 deleteClient(clients.fd[i]);
-                                printf("Child gone\n");
+                                if(debug)
+                                    printf("Child gone\n");
                             }
                         }
                     }
@@ -412,7 +411,6 @@ int main(int argc, char const *argv[]) {
                     memset(bufferHex, '\0', PACKAGE_TCP);
                 }
                 else if(!root){
-                    printf("i received from my dad \n");
 
                     // Reads the message from its dad
                     int n = readTcp(fdUp, bufferUp);
@@ -424,7 +422,8 @@ int main(int argc, char const *argv[]) {
 
                     int newAction = 1;
                     while(newAction == 1) {
-                        printf("action: %c%c\n", bufferUp[0], bufferUp[1]);
+                        if(debug)
+                            printf("action: %c%c\n", bufferUp[0], bufferUp[1]);
 
                         if(bufferUp[0] == 'D' && bufferUp[1] == 'A') {
                             int newLine = 0;
@@ -433,7 +432,8 @@ int main(int argc, char const *argv[]) {
                                 sscanf(&bufferUp[3], "%[^\n]\n", sizeStream);
                                 // Checks if the DATA is complete
                                 if((int) strtol(sizeStream, NULL, 16) + 8 <= n) {
-                                    printf("I received DATA\n"); 
+                                    if(debug)
+                                        printf("I received DATA\n"); 
 
                                     if(dataStream) {
                                         if(ascii){
@@ -487,10 +487,12 @@ int main(int argc, char const *argv[]) {
                             }
                         }
                         else if(bufferUp[0] == 'W' && bufferUp[1] == 'E') {
-                            printf("I received a WELCOME\n");
                             int newLine = 0;
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0){
+                                if(debug)
+                                    printf("I received a WELCOME\n");
+                                
                                 sscanf(&bufferUp[3], "%[^\n]\n", idStream);
 
                                 //in this case sizeId received is sizeStream
@@ -520,17 +522,16 @@ int main(int argc, char const *argv[]) {
                             }
                         }
                         else if(bufferUp[0] == 'P' && bufferUp[1] == 'Q'){
-                            printf("I received a POP_QUERYclients\n");
                             int newLine = 0;
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
                                 // checks if both informations are contained there
                                 if(sscanf(&bufferUp[3], "%[^ ] %[^\n]\n", queryIdAux, bestpopsAux) == 2) {
-                                    printf("queryIdAux: %s\nbestpopsAux: %s\n", queryIdAux, bestpopsAux);
-
-                                    printf("clients.available !! %d\n", clients.available);
-
-
+                                    if(debug) {
+                                        printf("I received a POP_QUERYclients\n");
+                                        printf("queryIdAux: %s\nbestpopsAux: %s\n", queryIdAux, bestpopsAux);
+                                    }
+                                        
                                     // Proccess the POP_QUERY
                                     if(clients.available > 0) {
                                         // If the iam has available tcp but not enough to cover the request.
@@ -598,13 +599,17 @@ int main(int argc, char const *argv[]) {
                         }
 
                         else if(bufferUp[0] == 'R' && bufferUp[1] == 'E'){
-                            printf("I received a REDIRECT\n");
+                            
                             int newLine = 0;
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
                                 // checks if both informations are contained there
                                 if(sscanf(&bufferUp[3], "%[^:]:%[^\n]\n", availableIAmRootIP, availableIAmRootPort) == 2) {
-                                    printf("availableIAmRootIP: %s -availableIAmRootPort: %s\n", availableIAmRootIP, availableIAmRootPort);
+                                    if(debug) {
+                                        printf("I received a REDIRECT\n");
+                                        printf("availableIAmRootIP: %s -availableIAmRootPort: %s\n", availableIAmRootIP, availableIAmRootPort);
+                                    }
+                                    
                                     close(fdUp);
                                     fdUp = -1;
 
@@ -647,16 +652,15 @@ int main(int argc, char const *argv[]) {
                         else if(bufferUp[0] == 'B' && bufferUp[1] == 'S'){
                             int newLine = 0;
 
-                            printf("Stream Stop .. Wait a moment! \n");
 
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                printf("Stream Stop .. Wait a moment! \n");
+                                
                                 broken = 1;
 
                                 if(status == CONFIRMATION){
                                     printf("\nSTATUS CONFIRMATION\n");
-                                    close(fdUp);
-                                    fdUp = -1;
                                     DadLeft(&root, &fdAccessServer, &fdUp);
                                 }
                                
@@ -717,13 +721,12 @@ int main(int argc, char const *argv[]) {
                         else if(bufferUp[0] == 'T' && bufferUp[1] == 'Q'){
                             int newLine = 0;
 
-                            printf("I received a TREE_QUERY\n");
-
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
                                 if(sscanf(&bufferUp[3], "%[^:]:%[^\n]\n", TQip, TQport) == 2) {
-                                    printf("TQip: %s TQport: %s\n", TQip, TQport);
-
+                                    if(debug)
+                                        printf("I received a TREE_QUERY\n");
+                                    
                                     // Checks if the TREE_QUERY destination is the own
                                     if((strcmp(ipaddr, TQip) == 0) && (strcmp(tport, TQport) == 0)) {
                                         // Sends a tree reply
@@ -767,7 +770,8 @@ int main(int argc, char const *argv[]) {
             }
             // When receives a new client, performs accept
             else if(fdDown != -1 && FD_ISSET(fdDown,&fd_sockets)){
-                printf("Received New Client \n");
+                if(debug)
+                    printf("Received New Client \n");
 
                 // Variables to accept new clients
                 int newfd = -1;
@@ -786,7 +790,8 @@ int main(int argc, char const *argv[]) {
                         if(!WELCOME(newfd)) {
                             deleteFdClient(newfd);
                         }
-                        printf("WELCOME Sent\n");
+                        if(debug)
+                            printf("WELCOME Sent\n");
                     }
                     else{
                         int n = getIndexChild(lastChild + 1);
@@ -833,6 +838,12 @@ int main(int argc, char const *argv[]) {
 
                                 int newLine = 0;
 
+                                writeTcp(clients.fd[i], "D", 1);
+                                sleep(2);
+                                writeTcp(clients.fd[i], "A ", 2);
+                                sleep(2);
+                                writeTcp(clients.fd[i], "0002\noi", 7);
+
                                 // Found a complete message
                                 if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){
                                     // checks if both informations are contained there
@@ -877,24 +888,17 @@ int main(int argc, char const *argv[]) {
                             }
                             // Receives a POP-REPLY
                             else if(clients.buffer[i][0] == 'P' && clients.buffer[i][1] == 'R'){
-                                printf("recebi um %s \n", clients.buffer[i]);
 
                                 int newLine = 0;
                                 // Found a complete message
                                 if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0) {
-                                    printf("Received a POP_REPLY\n");
+                                    if(debug)
+                                        printf("Received a POP_REPLY\n");
                                     // checks if both informations are contained there
-                                    printf("sim entrei \n");
                                     if(sscanf(&clients.buffer[i][3],"%[^ ] %[^:]:%[^ ] %[^\n]\n", queryIdAux, newPopIp, newPopPort, avails) == 4) {
                                         int availsSend;
 
-                                        printf("queryIdAux2 %s \n", queryIdAux);
-                                        printf("newPopIp2 %s \n", newPopIp);
-                                        printf("Port2 %s \n", newPopPort);
-                                        printf("avails2 %s \n", avails);
-
-
-                                        printListQId();
+                                        //printListQId();
                                         // When it's root, insert the number of tcp sessions that the iamroot is able to have
                                         if(root){
                                             // Finds how many bestpops are still to find to that queryID
@@ -904,7 +908,6 @@ int main(int argc, char const *argv[]) {
                                                 availsSend = atoi(avails);
                                             else 
                                                 availsSend = n;
-                                            printf("availsSend %d\n", availsSend);
                                             if(availsSend != 0) {
                                                 // checks if the AP is already on the list or if the current AP bestpops on the list is smaller than the new receive value
                                                 if(isAPontTheList(newPopIp, newPopPort, availsSend) == 1) {
@@ -917,11 +920,6 @@ int main(int argc, char const *argv[]) {
                                             }
                                         }
                                         else{
-                                            printf("queryIdAux1 %s \n", queryIdAux);
-                                            printf("newPopIp1 %s \n", newPopIp);
-                                            printf("Port1 %s \n", newPopPort);
-
-
                                             // Finds how many bestpops are still to find to that queryID
                                             n = getLeftQueryID(queryIdAux);
 
@@ -944,13 +942,6 @@ int main(int argc, char const *argv[]) {
                                                 }
                                             }
                                         }
-
-                                        printListQId();
-
-                                        memset(newPopPort, '\0', BUFFER_SIZE);
-                                        memset(avails, '\0', BUFFER_SIZE);
-                                        memset(newPopIp, '\0', BUFFER_SIZE);
-                                        memset(queryIdAux, '\0', BUFFER_SIZE);
                                     }
                                     // checks if there is another message
                                     if(clients.buffer[i][newLine + 1] != '\0') {
@@ -969,7 +960,7 @@ int main(int argc, char const *argv[]) {
                                 }
                             }
                             // Receives a TREE-REPLY
-                            else if(clients.buffer[i][0] == 'T' && clients.buffer[i][1] == 'R'){
+                            else if(clients.buffer[i][0] == 'T' && clients.buffer[i][1] == 'R') {
 
                                 int doubleNewLine = 0;
                                 // Found a complete message
@@ -999,7 +990,7 @@ int main(int argc, char const *argv[]) {
                                     else {
                                         // Reenvia a mensagem para cima
                                         if(writeTcp(fdUp, clients.buffer[i], doubleNewLine + 1) == -1) {
-                                            // CHAMAR WHO IS ROOT
+                                            DadLeft(&root, &fdAccessServer, &fdUp);
                                         }
                                     }
 
@@ -1016,21 +1007,21 @@ int main(int argc, char const *argv[]) {
                                 }
                                 // The data is not complete
                                 else {
-                                    printf("oii? \n");
                                     newAction = 0;
                                 }
                             }
                             else {
                                 newAction = 0;
+                                if(clients.buffer[i][0] != '\0' && clients.buffer[i][1] != '\0') {
+                                    if(debug){
+                                        printf("Client sent bad message\n");
+                                    }
+                                    deleteClient(clients.fd[i]);
+                                }
                             }
                         } 
                     }
                 }
-
-                if(root)
-                    printListCLient();
-
-                
             }
             else {
                 printf("I received something, but didn't read the message\n");

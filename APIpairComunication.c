@@ -39,8 +39,6 @@ int WELCOME(int _fd) {
     if((writeTcp(_fd, buffer, i + 1)) == -1) 
         return 0;
 
-    printf("recebi um novo cliente  \n");
-
     return 1;
 }
 
@@ -58,11 +56,9 @@ int NEW_POP(int _fd) {
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    printf("o buffer é %s \n", buffer);
     if((writeTcp(_fd, buffer, i + 1)) == -1) 
         return 0;
 
-    printf("sent a NEW_POP\n");
 
     return 1;
 }
@@ -83,8 +79,6 @@ int REDIRECT(int _fd, char _ipaddr[], char _tport[]) {
 
     if((writeTcp(_fd, buffer, i + 1))== -1) 
         return 0;
-
-    printf("sent a REDIRECT\n");
 
     return 1;
 }
@@ -141,19 +135,13 @@ int DATA(int _fd, int nbytes, char _data[]) {
     strcat(buffer, nbytesHex);
     strcat(buffer,"\n");
     strcat(buffer, _data);
-
-    printf("dentro da func DATA: %d\n", (int) strlen(_data));
    
     // finds the size of the NEW_POP message
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);
 
-    printf("i %d, a data que vou enviar é : %s \n", i ,buffer);
-
     if((writeTcp(_fd, buffer, i)) == -1) 
         return 0;
-
-    printf("sent DATA\n");
 
     return 1;
 }
@@ -175,7 +163,6 @@ int POP_QUERYroot(int _fd, uint16_t _queryId, int _bestPops) {
     sprintf(bestPopString, "%d", _bestPops);
     strcat(buffer, bestPopString);
     strcat(buffer, "\n");
-    printf("o buffer no POP_QUERYroot é %s\n", buffer);
 
     // finds the size of the POP_QUERY message
     int i = 0;
@@ -200,7 +187,6 @@ int POP_QUERYclients(int _fd, char _queryId[], int _bestPops) {
     sprintf(bestPopString, "%d", _bestPops);
     strcat(buffer, bestPopString);
     strcat(buffer, "\n");
-    printf("o buffer no POP_QUERYclients é %s\n", buffer);
 
     // finds the size of the POP_QUERY message
     int i = 0;
@@ -229,7 +215,6 @@ int POP_REPLY(int _fd, char _queryID[], char _ipaddr[], char _tport[], int _avai
     sprintf(availsString, "%d", _avails);
     strcat(buffer, availsString);
     strcat(buffer, "\n");
-    printf("o buffer no POP_REPLY é %s\n", buffer);
 
     // finds the size of the POP_REPLY message
     int i = 0;

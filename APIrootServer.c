@@ -23,8 +23,9 @@
 void ctrl_c_callback_handler(int signum) {
     printf("sai por CTRL_C \n ");
 
-    if(root)
+    if(root) {
       REMOVE();
+    }
 
     closeAllClients();
     clearClientStructure();
@@ -168,9 +169,11 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
             // EXIT PROGRAM
             exit(0);
         }
-        printf("availableIAmRootIP : %s \n", _availableIAmRootIP);
-        printf("availableIAmRootPort : %s  \n", _availableIAmRootPort);
         
+        if(debug) {
+            printf("availableIAmRootIP : %s \n", _availableIAmRootIP);
+            printf("availableIAmRootPort : %s  \n", _availableIAmRootPort);
+        }   
     }
 
     freeaddrinfo(res);
@@ -424,7 +427,9 @@ int REMOVE() {
 	struct addrinfo * res = createUPDsocket(&fd, rsaddr, rsport);
 
 	// Creates remove message with the idication of current StreamID
-    sprintf(buffer, "REMOVE %s\n", streamId);
+    strcpy(buffer, "REMOVE ");
+    strcat(buffer, streamId);
+    strcat(buffer, "\n");
 
     // finds the size of the WHOISROOT message
     int i = 0;
@@ -476,6 +481,7 @@ int REMOVE() {
     freeaddrinfo(res);
 
     close(fd);
+    printf("REMOVE Done\n");
 
     return 1;
 }

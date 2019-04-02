@@ -230,7 +230,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Error decoding ipaddr\n");
                 exit(1);
             }
-            printf("ipaddr %s\n", ipaddr);
+            //printf("ipaddr %s\n", ipaddr);
         }
         else if(strcmp(argv[i], "-t") == 0) {
             i++;
@@ -238,7 +238,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Error decoding tport\n");
                 exit(1);
             }
-            printf("tport %s\n", tport);
+            //printf("tport %s\n", tport);
             if(!checkPort(atoi(tport)))
             {
                 printf("port not available \n");
@@ -251,7 +251,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Error decoding uport\n");
                 exit(1);
             }
-            printf("uport %s\n", uport);
+            //printf("uport %s\n", uport);
             if(!checkPort(atoi(uport)))
             {
                  printf("port not available \n");
@@ -264,7 +264,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Error decoding rsaddr, rsport\n");
                 exit(1);
             }
-            printf("rsaddr %s, rsport %s\n", rsaddr, rsport);
+            //printf("rsaddr %s, rsport %s\n", rsaddr, rsport);
             if(!checkPort(atoi(rsport))) {
                  printf("port not available \n");
                  exit(1);
@@ -280,7 +280,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("tcpsessions has to be greater than 1 \n");
                 exit(1);
             }
-            printf("tcpsessions %d\n", *tcpsessions);
+            //printf("tcpsessions %d\n", *tcpsessions);
         }
         else if(strcmp(argv[i], "-n") == 0) {
             i++;
@@ -288,7 +288,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Error decoding bestpops\n");
                 exit(1);
             }
-            printf("bestpops %d\n", *bestpops);
+            //printf("bestpops %d\n", *bestpops);
              if(*(bestpops) < 1){
                 printf("bestpops has to be greater than 1 \n");
                 exit(1);
@@ -300,7 +300,7 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Error decoding tsecs\n");
                 exit(1);
             }
-            printf("tsecs %d\n", *tsecs);
+            //printf("tsecs %d\n", *tsecs);
         }
         else if(strcmp(argv[i], "-b") == 0) {
             *dataStream = 0;

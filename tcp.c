@@ -79,8 +79,6 @@ int connectToTcp(char _availableIAmRootIP[], char _availableIAmRootPort[]) {
         return -1;
     }
 
-    printf("o fd depois do tcp é : %d \n", fdUp);
-
     return fdUp;
 }
 
@@ -111,8 +109,6 @@ int createTcpServer() {
         printf("Error listen\n");
         exit(1);
     }
-
-    printf("waiting new clients \n");
 
     return fd;
 }
