@@ -29,8 +29,8 @@ void ctrl_c_callback_handler(int signum) {
 
     closeAllClients();
     clearClientStructure();
-    void printListQId();
-    void deleteAPList();
+    deleteAPList();
+    deleteQueryIDList();
     
     //temos de dar close aos sockets todos nao?
     exit(0);
@@ -83,7 +83,7 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
     }
     // in the case of status confirmaion, i have to receive a STREAM FLOWING TO KNOW that its ok to pass to normal state
     else {
-        printf("\n    CHENAGED STATE TO CONFIRMATION\n");
+        printf("\n  CHANGED STATE TO CONFIRMATION\n");
         status = CONFIRMATION;
         timerBS = 0;
     }

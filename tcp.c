@@ -110,6 +110,11 @@ int createTcpServer() {
         exit(1);
     }
 
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 }, sizeof(int)) < 0) {
+        printf("setsockopt(SO_REUSEADDR) failed\n");
+        exit(1);
+    }
+
     return fd;
 }
 

@@ -37,6 +37,8 @@ int getLeftQueryID(char _queryID[]);
 
 void deleteQueryID(char  _queryID[]);
 
+void deleteQueryIDList();
+
 int isAPontTheList(char _port[], char _ip[], int _bestpops);
 
 void insertAccessPoint(char _ip[], char  _port[], int _bestpops) ;

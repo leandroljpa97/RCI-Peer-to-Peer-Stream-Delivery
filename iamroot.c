@@ -32,7 +32,7 @@ COMMENTS
 #include <ctype.h> 
 
 
-void interpRootServerMsg(char _data[]) {
+void interpRootServerMsg(char _data[], int _fdAccessServer, int _fdUp, int _fdDown) {
     printf("data: %s \n",_data);
     char contentAux[100], content[100];
     int flag = sscanf(_data, "%[^\n]\n", contentAux);
@@ -124,7 +124,19 @@ void interpRootServerMsg(char _data[]) {
         }
         else if(!strcmp(content,"exit")){
             printf("pressed exit \n");
-            REMOVE();
+            if(root)
+                REMOVE();
+            
+            closeAllClients();
+            clearClientStructure();
+            deleteAPList();
+            deleteQueryIDList();
+            close(_fdAccessServer);
+            close(_fdUp);
+            close(_fdDown);
+            
+            //temos de dar close aos sockets todos nao?
+            exit(0);
         }
         else 
             printf("wrong command, try again \n");
@@ -307,7 +319,10 @@ int main(int argc, char const *argv[]) {
 
 
                     if(root)
-                        printListCLient();
+                        if(debug) {
+                            printListCLient();
+                            printListQId();
+                        }
                 }
                 else 
                     timerPQ++;
@@ -336,7 +351,7 @@ int main(int argc, char const *argv[]) {
                 if (fgets(userInput, BUFFER_SIZE, stdin) == NULL)
                     printf("Nothing to read in stdin.\n");
                 else 
-                    interpRootServerMsg(userInput);    
+                    interpRootServerMsg(userInput, fdAccessServer, fdUp, fdDown);    
             } 
             // When receives messages from the access server
             else if(fdAccessServer != -1 && FD_ISSET(fdAccessServer, &fd_sockets)) {
@@ -376,6 +391,8 @@ int main(int argc, char const *argv[]) {
             else if(fdUp != -1 && FD_ISSET(fdUp, &fd_sockets)) {
 
                 if(root){
+                    if(debug)
+                        printf("I receive something from STREAM\n");
                     // Reads the stream from the source up to the maximum allowed size
                     // with n we determine how many bites were read, so we can prepare the buffer to send downstream
                     int n = readTcp(fdUp, bufferUp);
@@ -428,10 +445,11 @@ int main(int argc, char const *argv[]) {
                         if(bufferUp[0] == 'D' && bufferUp[1] == 'A') {
                             int newLine = 0;
                             // Found a complete message
-                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                            if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0 && newLine == 7 && bufferUp[2] == ' ') {
                                 sscanf(&bufferUp[3], "%[^\n]\n", sizeStream);
                                 // Checks if the DATA is complete
-                                if((int) strtol(sizeStream, NULL, 16) + 8 <= n) {
+                                int sizeStreamConverted = (int) strtol(sizeStream, NULL, 16);
+                                if(sizeStreamConverted + 8 <= n && sizeStreamConverted > 0) {
                                     if(debug)
                                         printf("I received DATA\n"); 
 
@@ -442,7 +460,6 @@ int main(int argc, char const *argv[]) {
                                         else {
                                             AsciiToHex(bufferUp, bufferHex);
                                             printf("o buffer tcp é: %s \n", bufferHex);
-
                                         }
                                     }
 
@@ -478,11 +495,25 @@ int main(int argc, char const *argv[]) {
                                 }
                                 // The data is not complete                            
                                 else {
+                                    if(sizeStreamConverted == 0) {
+                                        memset(bufferUp, '\0', PACKAGE_TCP);
+                                        if(debug){
+                                            printf("Dad sent bad message\n");
+                                        }
+                                        DadLeft(&root, &fdAccessServer, &fdUp);       
+                                    }
                                     newAction = 0;
                                 }
                             }
                             // The data is not complete                            
                             else {
+                                if(strlen(bufferUp) > 8) {
+                                    memset(bufferUp, '\0', PACKAGE_TCP);
+                                    if(debug){
+                                        printf("Dad sent bad message\n");
+                                    }
+                                    DadLeft(&root, &fdAccessServer, &fdUp);
+                                }
                                 newAction = 0;
                             }
                         }
@@ -763,7 +794,14 @@ int main(int argc, char const *argv[]) {
                             }
                         }
                         else {
-                                newAction = 0;
+                            newAction = 0;
+                            if(bufferUp[0] != '\0' && bufferUp[1] != '\0') {
+                                if(debug){
+                                    printf("Dad sent bad message\n");
+                                }
+                                memset(bufferUp, '\0', PACKAGE_TCP);
+                                DadLeft(&root, &fdAccessServer, &fdUp);
+                            }
                         }
                     }
                 }                
@@ -837,12 +875,6 @@ int main(int argc, char const *argv[]) {
                                     printf("Received a NEW_POP\n");
 
                                 int newLine = 0;
-
-                                writeTcp(clients.fd[i], "D", 1);
-                                sleep(2);
-                                writeTcp(clients.fd[i], "A ", 2);
-                                sleep(2);
-                                writeTcp(clients.fd[i], "0002\noi", 7);
 
                                 // Found a complete message
                                 if((newLine = findsNewLine(clients.buffer[i], PACKAGE_TCP)) >= 0){

@@ -328,8 +328,10 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
             for(int j = 0; j< strlen(streamIdAux) ; j++) {
                 streamId[j] = tolower(streamIdAux[j]);
             }
+
             streamId[strlen(streamIdAux)] = '\0';
-            if(sscanf(streamId,"%[^:]:%[^:]:%s", streamName, streamIP, streamPort)!=3){
+            printf("%s\n", streamId);
+            if(sscanf(streamId,"%[^:]:%[^:]:%s", streamName, streamIP, streamPort) != 3){
                 printf("error in streamId parameters \n");
                 return 1;
             }
