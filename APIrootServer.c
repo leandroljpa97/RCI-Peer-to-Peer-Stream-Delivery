@@ -299,6 +299,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             } while(*fdUp == -1 && ntries <3);
 
             if(ntries == 3){
+              REMOVE();
               printf("I tried 3 times to connect with stream . Cannot connect with stream \n");
               exit(1);
             }
