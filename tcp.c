@@ -10,16 +10,16 @@
 
 void initTcp(struct addrinfo *_hints){
     memset(_hints, 0 ,sizeof(*_hints));
-    _hints->ai_family=AF_INET;    
-    _hints->ai_socktype=SOCK_STREAM;   
+    _hints->ai_family=AF_INET;
+    _hints->ai_socktype=SOCK_STREAM;
     _hints->ai_flags= AI_NUMERICHOST | AI_NUMERICSERV;
 }
 
 
 void initTcpServer(struct addrinfo *_hints){
     memset(_hints, 0 ,sizeof(*_hints));
-    _hints->ai_family=AF_INET;    
-    _hints->ai_socktype=SOCK_STREAM;   
+    _hints->ai_family=AF_INET;
+    _hints->ai_socktype=SOCK_STREAM;
     _hints->ai_flags= AI_PASSIVE | AI_NUMERICSERV;
 }
 
@@ -30,7 +30,7 @@ void initTcpServer(struct addrinfo *_hints){
         fdUp = file descriptor to communicate with adjacent iamroot
 */
 int connectToStream() {
-    
+
 	struct addrinfo hints, *res_tcp;
 
 	initTcp(&hints);
@@ -38,19 +38,19 @@ int connectToStream() {
     int n = getaddrinfo(streamIp, streamPort, &hints, &res_tcp);
     if(n != 0) {
         printf("error getaddrinfo in TCP source server \n");
-        exit(1);
+        return -1;
     }
 
     int fdUp = socket(res_tcp->ai_family, res_tcp->ai_socktype, res_tcp->ai_protocol);
     if(fdUp == -1) {
         printf("error creating TCP socket TCP to source server!! \n ");
-        exit(1);
+        return -1;
     }
 
     n = connect(fdUp, res_tcp->ai_addr, res_tcp->ai_addrlen);
     if(n == -1) {
         printf("error in connect with TCP socket TCP in source!! \n ");
-        exit(1);
+        return -1;
     }
 
     return fdUp;
@@ -121,8 +121,8 @@ int createTcpServer() {
 
 
 int readTcp(int fd, char* buffer) {
-    int nReceived;   
-    char aux[PACKAGE_TCP];    
+    int nReceived;
+    char aux[PACKAGE_TCP];
 
     nReceived = read(fd, aux, sizeof(aux));
     if(nReceived <= 0){
@@ -137,8 +137,8 @@ int readTcp(int fd, char* buffer) {
 }
 
 int readTcpNBytes(int fd, char* buffer, int nbytes) {
-    int nReceived;   
-    char aux[PACKAGE_TCP];    
+    int nReceived;
+    char aux[PACKAGE_TCP];
 
     nReceived = read(fd, aux, nbytes);
     if(nReceived <= 0){
@@ -155,11 +155,11 @@ int readTcpNBytes(int fd, char* buffer, int nbytes) {
 
 
 int writeTcp(int _fd, char *data, int size) {
-    int nSended;   
-    int nbytes;     
-    int nLeft;      
+    int nSended;
+    int nbytes;
+    int nLeft;
 
-    nbytes = size; 
+    nbytes = size;
     nLeft = nbytes;
 
     while(nLeft > 0) {

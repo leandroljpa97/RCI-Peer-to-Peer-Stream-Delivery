@@ -31,7 +31,7 @@ void ctrl_c_callback_handler(int signum) {
     clearClientStructure();
     deleteAPList();
     deleteQueryIDList();
-    
+
     //temos de dar close aos sockets todos nao?
     exit(0);
 }
@@ -92,7 +92,7 @@ void DadLeft(int * _root, int * _fdAccessServer, int * _fdUp){
 int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAmRootIP[] , char _availableIAmRootPort[]){
     struct sockaddr_in addr;
     int fd = -1;
-    fd_set fd_sockets;  
+    fd_set fd_sockets;
 
     struct timeval *t1 = NULL;
     struct timeval t2;
@@ -103,7 +103,7 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
         printf("o ip da root é %s \n", _accessServerIP);
         printf("o porto da root é %s \n", _accessServerPort);
     }
-                        
+
 
     // Initiates UPD socket for communication with the accessServer
     struct addrinfo *res = createUPDsocket(&fd, _accessServerIP, _accessServerPort);
@@ -126,12 +126,12 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
         FD_ZERO(&fd_sockets);
         max = fd;
         addFd(&fd_sockets, &max, fd);
-        
+
         // Puts server in receive state with timeout option
-        counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);     
-            
+        counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);
+
         if(counter < 0){
-            perror("Error in select"); 
+            perror("Error in select");
             close(fd);
             exit(0);
             }
@@ -149,7 +149,7 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
 
     if(tries >= TRIES) {
         // FUNCTION TO TURN OFF EVERYTHING
-        perror("Error POPREQ"); 
+        perror("Error POPREQ");
         freeaddrinfo(res);
         close(fd);
         return -2;
@@ -158,22 +158,22 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
     if(FD_ISSET(fd, &fd_sockets)){
         int n = receiveUdp(fd, buffer, BUFFER_SIZE, &addr);
         if(strstr(buffer, "POPRESP") != NULL) {
-            n = sscanf(buffer, "%[^ ] %[^ ] %[^:]:%[^\n]\n", 
+            n = sscanf(buffer, "%[^ ] %[^ ] %[^:]:%[^\n]\n",
                 action, buffer_aux, _availableIAmRootIP , _availableIAmRootPort);
             if(n != 4) {
                 printf("ERROR on POPRESP\n");
             }
-        } 
+        }
         else {
             printf("ERROR on receiving to who to connect to\n");
             // EXIT PROGRAM
             exit(0);
         }
-        
+
         if(debug) {
             printf("availableIAmRootIP : %s \n", _availableIAmRootIP);
             printf("availableIAmRootPort : %s  \n", _availableIAmRootPort);
-        }   
+        }
     }
 
     freeaddrinfo(res);
@@ -186,14 +186,14 @@ int findDad(char _accessServerIP[], char _accessServerPort[], char _availableIAm
 
 
 /*
- WHOISROOT: 
+ WHOISROOT:
  Esta mensagem é enviada ao servidor de raízes, por uma aplicação iamroot, pedindo o
 endereço IP e o porto UDP, do servidor de acesso da raiz da árvore de escoamento, associados
 a um stream, identificado no pedido. Para além de, no pedido, ser identificado o stream, é
 também indicado o endereço IP e o porto UDP do servidor de acesso da aplicação iamroot que
 faz o pedido. Caso não haja nenhum registo no servidor de raízes associado ao stream, a
 aplicação iamroot que faz o pedido ficará registada como raiz do stream em questão.
- 
+
 
  */
 int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
@@ -206,7 +206,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
     char accessServerPort[BUFFER_SIZE];
 
     // Mask for the select
-    fd_set fd_sockets;  
+    fd_set fd_sockets;
 
     // Variables for select time out
     struct timeval* t1 = NULL, t2;
@@ -245,12 +245,12 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
         FD_ZERO(&fd_sockets);
         max = fd;
         addFd(&fd_sockets, &max, fd);
-    
+
         // Puts server in receive state with timeout option
-        counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);     
-            
+        counter = select(max + 1, &fd_sockets, (fd_set*) NULL, (fd_set *)NULL, (struct timeval*) t1);
+
         if(counter < 0) {
-            perror("Error in select"); 
+            perror("Error in select");
             close(fd);
             exit(0);
         }
@@ -268,7 +268,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
 
     if(tries >= TRIES && counter < 1) {
         // FUNCTION TO TURN OFF EVERYTHING
-        perror("Error WHOISROOT"); 
+        perror("Error WHOISROOT");
         freeaddrinfo(res);
         close(fd);
         exit(0);
@@ -290,12 +290,23 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
             // Creates Access Server
             *fdAccessServer = initUDPserver();
 
-            // Access to stream to start transmission
-            *fdUp = connectToStream();            
+            // Access to stream to start transmission - do 3 tries to connect with Stream
+            int ntries = 0;
+            do {
+              printf("trying connect to Stream.. %d time(s)\n", ntries+1);
+              *fdUp = connectToStream();
+              ntries ++;
+            } while(*fdUp == -1 && ntries <3);
+
+            if(ntries == 3){
+              printf("I tried 3 times to connect with stream . Cannot connect with stream \n");
+              exit(1);
+            }
+
         }
-        // Receives the information that there's already a root on the tree 
+        // Receives the information that there's already a root on the tree
         // and needs to go to the access server to acquire the correct IP and port
-        else if(!strcmp(action, "ROOTIS")){                    
+        else if(!strcmp(action, "ROOTIS")){
             *root = 0;
             int reps = 0;
 
@@ -304,7 +315,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
 
             printf("ROOTIS %s:%s\n", accessServerIP, accessServerPort);
 
-            // Communicates with access server to understand to where to connect 
+            // Communicates with access server to understand to where to connect
             do{
                 if((findDad(accessServerIP, accessServerPort, availableIAmRootIP, availableIAmRootPort) == -2)){
                     if(status == DAD_LOST)
@@ -329,7 +340,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
                         if(strcmp(availableIAmRootIP, clients.ip[j]) == 0 && strcmp(availableIAmRootPort, clients.port[j]) == 0 ){
                             reps ++;
                             if(debug == 1)
-                                printf(" access server gave ip and port of my childreen \n"); 
+                                printf(" access server gave ip and port of my childreen \n");
                             continue;
                         }
                     }
@@ -368,7 +379,7 @@ int WHOISROOT(int *root, int *fdAccessServer, int *fdUp) {
 int WHOISROOTwithoutResponse() {
     int fd;
     char buffer[BUFFER_SIZE];
-    
+
     // Creates an UDP socket for communication with root server
     struct addrinfo * res = createUPDsocket(&fd, rsaddr, rsport);
 
@@ -413,7 +424,7 @@ int REMOVE() {
     char action[BUFFER_SIZE];
 
     // Mask for the select
-    fd_set fd_sockets;  
+    fd_set fd_sockets;
 
     // Variables for select time out
     struct timeval* t1 = NULL, t2;
@@ -444,13 +455,13 @@ int REMOVE() {
     // Indicate to select to watch UDP socket
     FD_ZERO(&fd_sockets);
     int max = fd;
-    addFd(&fd_sockets, &max, fd);        
+    addFd(&fd_sockets, &max, fd);
 
     // Puts server in receive state with timeout option
-    counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
-        
+    counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);
+
     if(counter < 0){
-        perror("Error in select"); 
+        perror("Error in select");
         close(fd);
         exit(0);
         }
@@ -466,7 +477,7 @@ int REMOVE() {
             receiveUdp(fd, bufferRootServer, BUFFER_SIZE, &addr);
             sscanf(bufferRootServer, "%s\n", action);
             printf("a action é: %s \n", action);
-       
+
             if(!strcmp(action, "ERROR")) {
                 printf("a mensagem de erro é %s\n", bufferRootServer);
             }
@@ -496,7 +507,7 @@ int DUMP() {
 	char *streams;
 
     // Mask for the select
-    fd_set fd_sockets;  
+    fd_set fd_sockets;
 
     // Variables for select time out
     struct timeval* t1 = NULL, t2;
@@ -521,13 +532,13 @@ int DUMP() {
 	    FD_ZERO(&fd_sockets);
 	    int max = fd;
 	    addFd(&fd_sockets, &max, fd);
-	    
-    
+
+
         // Puts server in receive state with timeout option
-        counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);     
-            
+        counter = select(max+1, &fd_sockets, (fd_set*)NULL, (fd_set *)NULL, (struct timeval*) t1);
+
         if(counter < 0){
-            perror("Error in select"); 
+            perror("Error in select");
             close(fd);
             exit(0);
             }
@@ -544,7 +555,7 @@ int DUMP() {
 
     if(tries >= TRIES && counter < 1) {
         // FUNCTION TO TURN OFF EVERYTHING
-        perror("Error DUMP"); 
+        perror("Error DUMP");
         freeaddrinfo(res);
         close(fd);
         return 0;
@@ -567,7 +578,7 @@ int DUMP() {
 
             // Advance the "STREAMS"
             streams = &buffer[8];
-            printf("%s", streams);      
+            printf("%s", streams);
 
             free(buffer);
         }
@@ -579,5 +590,3 @@ int DUMP() {
 
     return 1;
 }
-
-

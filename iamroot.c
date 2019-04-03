@@ -29,7 +29,7 @@ COMMENTS
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h> 
+#include <ctype.h>
 
 
 void interpRootServerMsg(char _data[], int _fdAccessServer, int _fdUp, int _fdDown) {
@@ -42,7 +42,7 @@ void interpRootServerMsg(char _data[], int _fdAccessServer, int _fdUp, int _fdDo
     content[strlen(contentAux)] = '\0';
 
     if (flag < 0){
-        printf("Error reading stdin. Exit(0) the program\n");   
+        printf("Error reading stdin. Exit(0) the program\n");
     }
     else{
         if(!strcmp(content,"streams")) {
@@ -54,7 +54,7 @@ void interpRootServerMsg(char _data[], int _fdAccessServer, int _fdUp, int _fdDo
 
             if(broken)
                 printf("Stream broken \n");
-            else 
+            else
                 printf("Stream not broken \n");
 
             if(root){
@@ -126,7 +126,7 @@ void interpRootServerMsg(char _data[], int _fdAccessServer, int _fdUp, int _fdDo
             printf("pressed exit \n");
             if(root)
                 REMOVE();
-            
+
             closeAllClients();
             clearClientStructure();
             deleteAPList();
@@ -134,11 +134,11 @@ void interpRootServerMsg(char _data[], int _fdAccessServer, int _fdUp, int _fdDo
             close(_fdAccessServer);
             close(_fdUp);
             close(_fdDown);
-            
+
             //temos de dar close aos sockets todos nao?
             exit(0);
         }
-        else 
+        else
             printf("wrong command, try again \n");
     }
 
@@ -159,7 +159,7 @@ int main(int argc, char const *argv[]) {
     int maxfd = 0;
 
 	// Mask of active file descriptors
-    fd_set fd_sockets;  
+    fd_set fd_sockets;
 
     // Time variables for select timeout
     struct timeval * t1 = NULL;
@@ -177,7 +177,7 @@ int main(int argc, char const *argv[]) {
     // receive information from dad
     char bufferUp[PACKAGE_TCP];
     memset(bufferUp, '\0', PACKAGE_TCP);
-    
+
     char bufferHex[PACKAGE_TCP];
     memset(bufferHex, '\0', PACKAGE_TCP);
 
@@ -198,8 +198,8 @@ int main(int argc, char const *argv[]) {
     numberOfAP = 0;
 
 	// Read Input Arguments of the program and set the default variables
-    int dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIp, streamPort, ipaddr, tport, 
-                       				uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs, 
+    int dumpSignal = readInputArguments(argc, argv, streamId, streamName, streamIp, streamPort, ipaddr, tport,
+                       				uport, rsaddr, rsport, &tcpsessions, &bestpops, &tsecs,
                       				&dataStream, &debug);
 
     // Init clients struct
@@ -246,7 +246,7 @@ int main(int argc, char const *argv[]) {
         // Adds the file descriptor of the TCP to accept new clients
         if(fdDown != -1)
             addFd(&fd_sockets, &maxfd, fdDown);
-        
+
         // Adds the file descriptor of the TCP to comm with clients
         for(int i =0; i < tcpsessions; i++) {
             if(clients.fd[i] != 0) {
@@ -255,17 +255,17 @@ int main(int argc, char const *argv[]) {
         }
 
 
-        
+
 
         // Monitor all the file descritors to check for new inputs
-        counter = select(maxfd + 1, &fd_sockets, (fd_set*) NULL, (fd_set *) NULL, (struct timeval*) t1);     
-      
+        counter = select(maxfd + 1, &fd_sockets, (fd_set*) NULL, (fd_set *) NULL, (struct timeval*) t1);
+
         if(counter < 0){
             perror("Error in select");
-            
+
             for (int i = 0; i < tcpsessions; ++i)
             	close(clients.fd[i]);
-            
+
             close(fdUp);
             close(fdAccessServer);
             exit(0);
@@ -286,10 +286,10 @@ int main(int argc, char const *argv[]) {
 
                     if(WHOISROOTwithoutResponse() == 0)
                         printf("Unable to make WHO IS ROOT periódico\n");
-                    
+
                     timerTSECS = 0;
                 }
-                else 
+                else
                     timerTSECS++;
 
                 if(timerPQ == TIMEOUT_POPQUERY) {
@@ -324,7 +324,7 @@ int main(int argc, char const *argv[]) {
                             printListQId();
                         }
                 }
-                else 
+                else
                     timerPQ++;
             }
             if(status == CONFIRMATION) {
@@ -350,9 +350,9 @@ int main(int argc, char const *argv[]) {
 		        // Translates the message to the buffer
                 if (fgets(userInput, BUFFER_SIZE, stdin) == NULL)
                     printf("Nothing to read in stdin.\n");
-                else 
-                    interpRootServerMsg(userInput, fdAccessServer, fdUp, fdDown);    
-            } 
+                else
+                    interpRootServerMsg(userInput, fdAccessServer, fdUp, fdDown);
+            }
             // When receives messages from the access server
             else if(fdAccessServer != -1 && FD_ISSET(fdAccessServer, &fd_sockets)) {
                 char bufferAccessServer[BUFFER_SIZE];
@@ -370,7 +370,7 @@ int main(int argc, char const *argv[]) {
                         POPRESP(fdAccessServer, &addr, ipaddr, tport);
                     }
                     else {
-                        int findAP; 
+                        int findAP;
                         // Gets an IP and Port from the list of AP and responds to the client
                         if((findAP = getAccessPoint(ipAccessPoint, portAccessPoint)) != -1){
                             POPRESP(fdAccessServer, &addr, ipAccessPoint, portAccessPoint);
@@ -400,7 +400,24 @@ int main(int argc, char const *argv[]) {
                     // Stream is left - the program needs to restart and try to reconect with the source again
                     if(n <= 0) {
                         REMOVE();
-                        DadLeft(&root,&fdAccessServer,&fdUp);
+                        close(fdUp);
+                        close(fdAccessServer);
+                        fdUp = -1;
+                        broken = 1;
+
+                        for(int j = 0; j < tcpsessions; j++)
+                            if(clients.fd[j] != 0)
+                                if(!BROKEN_STREAM(clients.fd[j]))
+                                    deleteClient(clients.fd[j]);
+
+                        //trying to connect to stream
+                        WHOISROOT(&root,&fdAccessServer,&fdUp);
+
+                        for(int j = 0; j < tcpsessions; j++)
+                            if(clients.fd[j] != 0)
+                                if(!STREAM_FLOWING(clients.fd[j]))
+                                    deleteClient(clients.fd[j]);
+
                     }
 
                     if(dataStream){
@@ -451,7 +468,7 @@ int main(int argc, char const *argv[]) {
                                 int sizeStreamConverted = (int) strtol(sizeStream, NULL, 16);
                                 if(sizeStreamConverted + 8 <= n && sizeStreamConverted > 0) {
                                     if(debug)
-                                        printf("I received DATA\n"); 
+                                        printf("I received DATA\n");
 
                                     if(dataStream) {
                                         if(ascii){
@@ -487,25 +504,25 @@ int main(int argc, char const *argv[]) {
                                         memset(bufferHex, '\0', PACKAGE_TCP);
 
                                         newAction = 0;
-                                    } 
+                                    }
 
                                     // Clears the size stream since DATA is done
                                     memset(sizeStream, '\0', BUFFER_SIZE);
 
                                 }
-                                // The data is not complete                            
+                                // The data is not complete
                                 else {
                                     if(sizeStreamConverted == 0) {
                                         memset(bufferUp, '\0', PACKAGE_TCP);
                                         if(debug){
                                             printf("Dad sent bad message\n");
                                         }
-                                        DadLeft(&root, &fdAccessServer, &fdUp);       
+                                        DadLeft(&root, &fdAccessServer, &fdUp);
                                     }
                                     newAction = 0;
                                 }
                             }
-                            // The data is not complete                            
+                            // The data is not complete
                             else {
                                 if(strlen(bufferUp) > 8) {
                                     memset(bufferUp, '\0', PACKAGE_TCP);
@@ -523,7 +540,7 @@ int main(int argc, char const *argv[]) {
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0){
                                 if(debug)
                                     printf("I received a WELCOME\n");
-                                
+
                                 sscanf(&bufferUp[3], "%[^\n]\n", idStream);
 
                                 //in this case sizeId received is sizeStream
@@ -562,7 +579,7 @@ int main(int argc, char const *argv[]) {
                                         printf("I received a POP_QUERYclients\n");
                                         printf("queryIdAux: %s\nbestpopsAux: %s\n", queryIdAux, bestpopsAux);
                                     }
-                                        
+
                                     // Proccess the POP_QUERY
                                     if(clients.available > 0) {
                                         // If the iam has available tcp but not enough to cover the request.
@@ -630,7 +647,7 @@ int main(int argc, char const *argv[]) {
                         }
 
                         else if(bufferUp[0] == 'R' && bufferUp[1] == 'E'){
-                            
+
                             int newLine = 0;
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
@@ -640,7 +657,7 @@ int main(int argc, char const *argv[]) {
                                         printf("I received a REDIRECT\n");
                                         printf("availableIAmRootIP: %s -availableIAmRootPort: %s\n", availableIAmRootIP, availableIAmRootPort);
                                     }
-                                    
+
                                     close(fdUp);
                                     fdUp = -1;
 
@@ -655,7 +672,7 @@ int main(int argc, char const *argv[]) {
                                     }while(fdUp == -1 && tries < TRIES);
 
 
-                                    
+
                                     // Clears the idStram string, since it's jobs is done
                                     memset(availableIAmRootIP, '\0', IP_SIZE);
                                     memset(availableIAmRootPort, '\0', BUFFER_SIZE);
@@ -687,14 +704,14 @@ int main(int argc, char const *argv[]) {
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
                                 printf("Stream Stop .. Wait a moment! \n");
-                                
+
                                 broken = 1;
 
                                 if(status == CONFIRMATION){
                                     printf("\nSTATUS CONFIRMATION\n");
                                     DadLeft(&root, &fdAccessServer, &fdUp);
                                 }
-                               
+
                                for(int j = 0; j < tcpsessions; j++)
                                     if(clients.fd[j] != 0)
                                         if(!BROKEN_STREAM(clients.fd[j]))
@@ -727,7 +744,7 @@ int main(int argc, char const *argv[]) {
                                 if(status == CONFIRMATION)
                                     status = NORMAL;
 
-                               
+
                                 for(int j = 0; j < tcpsessions; j++)
                                     if(clients.fd[j] != 0)
                                         if(!STREAM_FLOWING(clients.fd[j]))
@@ -757,7 +774,7 @@ int main(int argc, char const *argv[]) {
                                 if(sscanf(&bufferUp[3], "%[^:]:%[^\n]\n", TQip, TQport) == 2) {
                                     if(debug)
                                         printf("I received a TREE_QUERY\n");
-                                    
+
                                     // Checks if the TREE_QUERY destination is the own
                                     if((strcmp(ipaddr, TQip) == 0) && (strcmp(tport, TQport) == 0)) {
                                         // Sends a tree reply
@@ -804,7 +821,7 @@ int main(int argc, char const *argv[]) {
                             }
                         }
                     }
-                }                
+                }
             }
             // When receives a new client, performs accept
             else if(fdDown != -1 && FD_ISSET(fdDown,&fd_sockets)){
@@ -844,7 +861,7 @@ int main(int argc, char const *argv[]) {
                     REDIRECT(newfd, clients.ip[lastChild], clients.port[lastChild]);
                     close(newfd);
                 }
-            } 
+            }
             // When receives messages from its clients
             else if(clients.available < tcpsessions){
                 for(int i = 0; i < tcpsessions; i++) {
@@ -854,7 +871,7 @@ int main(int argc, char const *argv[]) {
                     if(clients.fd[i] != 0 && FD_ISSET(clients.fd[i],&fd_sockets)){
                         if(debug == 1)
                             printf("recebi algo do meu filho com o id=%d\n",clients.fd[i]);
-                        
+
                         int n = readTcp(clients.fd[i], clients.buffer[i]);
                         if(n <= 0)  {
                             if(debug == 1)
@@ -938,7 +955,7 @@ int main(int argc, char const *argv[]) {
                                             // if the client has more tcp sessions than its needed - inputs only the necessary ones
                                             if(atoi(avails) <= n)
                                                 availsSend = atoi(avails);
-                                            else 
+                                            else
                                                 availsSend = n;
                                             if(availsSend != 0) {
                                                 // checks if the AP is already on the list or if the current AP bestpops on the list is smaller than the new receive value
@@ -963,7 +980,7 @@ int main(int argc, char const *argv[]) {
                                             }
 
                                             if(availsSend != 0) {
-                                                if(!POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend)) {                                            
+                                                if(!POP_REPLY(fdUp,queryIdAux,newPopIp, newPopPort, availsSend)) {
                                                     deleteQueryID(queryIdAux);
                                                     DadLeft(&root, &fdAccessServer, &fdUp);
                                                 }
@@ -1014,7 +1031,7 @@ int main(int argc, char const *argv[]) {
                                                     break;
                                             }
                                             printf(")\n");
-                                        }    
+                                        }
                                         memset(TRip, '\0', BUFFER_SIZE);
                                         memset(TRport, '\0', BUFFER_SIZE);
                                         memset(TRtcpsessions, '\0', BUFFER_SIZE);
@@ -1051,14 +1068,14 @@ int main(int argc, char const *argv[]) {
                                     deleteClient(clients.fd[i]);
                                 }
                             }
-                        } 
+                        }
                     }
                 }
             }
             else {
                 printf("I received something, but didn't read the message\n");
             }
- 
+
         }
 
     }
