@@ -24,7 +24,7 @@
 
 #define DEFAULT_STREAM_PORT "00000"
 #define DEFAULT_TPORT "59000"
-#define DEFAULT_UPORT "59000"
+#define DEFAULT_UPORT "58000"
 #define DEFAULT_RSADDR "193.136.138.142"
 #define DEFAULT_RSPORT "59000"
 #define DEFAULT_TCP_SESSIONS 1
@@ -116,6 +116,9 @@ void initMaskStdinFd(fd_set * _fd_sockets, int* _maxfd);
 void addFd(fd_set * _fd_sockets, int* _maxfd, int _fd);
 
 int checkPort(int _port);
+
+int checkIp(char * _ip);
+
 
 int readInputArguments(int argc, const char* argv[], char streamId[], char streamName[],
     					char streamIP[], char streamPort[], char ipaddr[], 

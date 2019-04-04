@@ -135,7 +135,7 @@ int DATA(int _fd, int nbytes, char _data[]) {
     strcat(buffer, nbytesHex);
     strcat(buffer,"\n");
     strcat(buffer, _data);
-   
+
     // finds the size of the NEW_POP message
     int i = 0;
     for(i = 0; buffer[i] != '\0'; ++i);

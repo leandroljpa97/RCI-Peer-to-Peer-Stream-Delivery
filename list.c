@@ -76,7 +76,6 @@ void decrementQueryID(char _queryID[]) {
 
 void deleteQueryID(char  _queryID[]) {
     queryIDList_t *myNode = queryIDList, *previous=NULL;
-    int flag = 0;
 
     while(myNode!=NULL)
     {
@@ -87,8 +86,6 @@ void deleteQueryID(char  _queryID[]) {
             else
                 previous->next = myNode->next;
 
-
-            flag = 1;
             free(myNode); //need to free up the memory to prevent memory leak
             break;
         }
@@ -97,8 +94,6 @@ void deleteQueryID(char  _queryID[]) {
         myNode = myNode->next;
     }
 
-    if(flag==0)
-        printf("Key not found!\n");
 }
 
 int getLeftQueryID(char _queryID[]) {

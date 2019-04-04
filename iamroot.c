@@ -456,8 +456,6 @@ int main(int argc, char const *argv[]) {
 
                     int newAction = 1;
                     while(newAction == 1) {
-                        if(debug)
-                            printf("action: %c%c\n", bufferUp[0], bufferUp[1]);
 
                         if(bufferUp[0] == 'D' && bufferUp[1] == 'A') {
                             int newLine = 0;
@@ -467,23 +465,27 @@ int main(int argc, char const *argv[]) {
                                 // Checks if the DATA is complete
                                 int sizeStreamConverted = (int) strtol(sizeStream, NULL, 16);
                                 if(sizeStreamConverted + 8 <= n && sizeStreamConverted > 0) {
-                                    if(debug)
+                                   if(debug)
                                         printf("I received DATA\n");
+
+                                    char dataBufferSent[PACKAGE_TCP];
+                                    strncpy(dataBufferSent,&bufferUp[8], sizeStreamConverted*sizeof(char*));
+                                    dataBufferSent[sizeStreamConverted] = '\0';
 
                                     if(dataStream) {
                                         if(ascii){
-                                            printf("o buffer tcp é: %s \n", bufferUp);
+                                            printf("A stream é:  %s \n", dataBufferSent);
                                         }
                                         else {
-                                            AsciiToHex(bufferUp, bufferHex);
-                                            printf("o buffer tcp é: %s \n", bufferHex);
+                                            AsciiToHex(dataBufferSent, bufferHex);
+                                            printf("A stream é: %s \n", bufferHex);
                                         }
                                     }
 
                                     // Retransmit data to its clients
                                     for (int i = 0; i < tcpsessions; ++i) {
                                         if(clients.fd[i] != 0) {
-                                            if(!DATA(clients.fd[i], (int) strtol(sizeStream, NULL, 16), &bufferUp[8])) {
+                                            if(!DATA(clients.fd[i], (int) strtol(sizeStream, NULL, 16), dataBufferSent)) {
                                                 deleteClient(clients.fd[i]);
                                                 printf("Child gone\n");
                                             }
@@ -538,10 +540,11 @@ int main(int argc, char const *argv[]) {
                             int newLine = 0;
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0){
+                                
+                                sscanf(&bufferUp[3], "%[^\n]\n", idStream);
                                 if(debug)
                                     printf("I received a WELCOME\n");
 
-                                sscanf(&bufferUp[3], "%[^\n]\n", idStream);
 
                                 //in this case sizeId received is sizeStream
                                 if(strcmp(idStream, streamId) == 0) {
@@ -703,6 +706,8 @@ int main(int argc, char const *argv[]) {
 
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
+                                if(debug)
+                                    printf("i received a BS \n");
                                 printf("Stream Stop .. Wait a moment! \n");
 
                                 broken = 1;
@@ -738,7 +743,7 @@ int main(int argc, char const *argv[]) {
 
                             // Found a complete message
                             if((newLine = findsNewLine(bufferUp, PACKAGE_TCP)) >= 0) {
-                                printf("Stream recovered. Enjoy it \n");
+                                printf("i received a SF \n");
                                 broken = 0;
 
                                 if(status == CONFIRMATION)
@@ -890,6 +895,7 @@ int main(int argc, char const *argv[]) {
                             if(clients.buffer[i][0] == 'N' && clients.buffer[i][1] == 'P') {
                                 if(debug == 1)
                                     printf("Received a NEW_POP\n");
+
 
                                 int newLine = 0;
 

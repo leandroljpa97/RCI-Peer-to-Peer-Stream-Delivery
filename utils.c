@@ -207,6 +207,28 @@ int checkPort(int _port){
     return 0;
 }
 
+int checkIp(char * _ip){
+
+    char aux1[50],aux2[50],aux3[50],aux4[50];
+
+    if(sscanf(_ip, "%[^.].%[^.].%[^.]%s",aux1,aux2,aux3,aux4) != 4)
+        return 0;
+
+    if(atoi(aux1) > 256 || atoi(aux1) <0)
+        return 0;
+
+    if(atoi(aux2) > 256 || atoi(aux2) <0)
+        return 0;
+
+    if(atoi(aux3) > 256 || atoi(aux3) <0)
+        return 0;
+
+    if(atoi(aux4) > 256 || atoi(aux4) <0)
+        return 0;
+
+    return 1;
+}
+
 
 int readInputArguments(int argc, const char* argv[], char streamId[], char streamName[],
                         char streamIP[], char streamPort[], char ipaddr[], 
@@ -228,6 +250,11 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
             i++;
             if(sscanf(argv[i], "%s", ipaddr) != 1) {
                 printf("Error decoding ipaddr\n");
+                exit(1);
+            }
+
+            if(!checkIp(ipaddr)){
+                printf("wrong ip \n");
                 exit(1);
             }
             //printf("ipaddr %s\n", ipaddr);
@@ -269,6 +296,11 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                  printf("port not available \n");
                  exit(1);
             }
+
+            if(!checkIp(rsaddr)){
+                printf("wrong ip \n");
+                exit(1);
+            }
         }
         else if(strcmp(argv[i], "-p") == 0) {
             i++;
@@ -299,6 +331,11 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
             if(sscanf(argv[i], "%d", tsecs) != 1) {
                 printf("Error decoding tsecs\n");
                 exit(1);
+            }
+
+            if(*tsecs < 1){
+                printf("tsecs greater or equal than 1\n");
+                exit(1);      
             }
             //printf("tsecs %d\n", *tsecs);
         }
@@ -340,6 +377,11 @@ int readInputArguments(int argc, const char* argv[], char streamId[], char strea
                 printf("Port not available \n");
                 return 1;
             }
+            if(!checkIp(streamIp)){
+                printf("wrong ip \n");
+                return 1;
+            }
+
 
             flag_streamId = 1;
         }
